@@ -1,6 +1,6 @@
 from django import forms
 from .models import Exam, ExamAssignment
-from questions.models import Subject
+from questions.models import Subject, Question
 
 
 class ExamForm(forms.ModelForm):
@@ -37,7 +37,12 @@ class ExamForm(forms.ModelForm):
 class AutoGenerateForm(forms.Form):
     subject = forms.ModelChoiceField(
         queryset=Subject.objects.all(), label='Môn học',
-        widget=forms.Select(attrs={'class': 'form-select'})
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
+    )
+    question_type = forms.ChoiceField(
+        required=False, label='Loại câu hỏi',
+        choices=[('', 'Tất cả loại')] + list(Question.TYPE_CHOICES),
+        widget=forms.Select(attrs={'class': 'form-select form-select-sm'})
     )
     easy_count = forms.IntegerField(
         min_value=0, initial=5, label='Số câu Dễ',

@@ -1,7 +1,15 @@
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from questions.models import Question, Subject
+
+# Trọng số điểm theo độ khó: Dễ < Trung bình < Khó
+DIFFICULTY_WEIGHTS = {
+    'easy': Decimal('1'),
+    'medium': Decimal('2'),
+    'hard': Decimal('3'),
+}
 
 
 class Exam(models.Model):
@@ -75,6 +83,36 @@ class Exam(models.Model):
     @property
     def question_count(self):
         return self.exam_questions.count()
+
+    def can_add_question(self, question):
+        """Câu hỏi chỉ được thêm nếu đúng loại bài thi (trừ bài Tổng hợp cho mọi loại)."""
+        if self.exam_type == self.TYPE_MIXED:
+            return True
+        return question.question_type == self.exam_type
+
+    def recalculate_points(self):
+        """
+        Phân bổ lại điểm cho từng câu hỏi sao cho:
+        - Tổng điểm tất cả câu = total_points của đề.
+        - Câu Khó > Trung bình > Dễ (theo DIFFICULTY_WEIGHTS).
+        Câu cuối hấp thụ phần lẻ để tổng khớp chính xác.
+        """
+        eqs = list(self.exam_questions.select_related('question').order_by('order'))
+        if not eqs:
+            return
+        weights = [DIFFICULTY_WEIGHTS.get(eq.question.difficulty, Decimal('1')) for eq in eqs]
+        total_weight = sum(weights)
+        total = Decimal(self.total_points)
+        assigned = Decimal('0')
+        n = len(eqs)
+        for i, (eq, w) in enumerate(zip(eqs, weights)):
+            if i < n - 1:
+                pts = (total * w / total_weight).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                assigned += pts
+            else:
+                pts = (total - assigned).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            eq.points = pts
+        ExamQuestion.objects.bulk_update(eqs, ['points'])
 
 
 class ExamQuestion(models.Model):
