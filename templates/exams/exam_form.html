@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-file-earmark-plus me-2 text-primary"></i>{{ title }}</h1>
+  <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+</div>
+<form method="post" id="examForm">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Thông tin cơ bản</h6></div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label fw-medium">Tiêu đề bài kiểm tra *</label>
+            {{ form.title }}
+            {% if form.title.errors %}<div class="text-danger small">{{ form.title.errors }}</div>{% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-medium">Mô tả</label>
+            {{ form.description }}
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Môn học</label>
+              {{ form.subject }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Loại bài thi</label>
+              {{ form.exam_type }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-3">
+        <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Cấu hình bài thi</h6></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Thời gian làm bài (phút)</label>
+              {{ form.duration_minutes }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Tổng điểm</label>
+              {{ form.total_points }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Điểm đạt</label>
+              {{ form.pass_score }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Số lần thi tối đa</label>
+              {{ form.max_attempts }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Thời gian bắt đầu</label>
+              {{ form.start_time }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Thời gian kết thúc</label>
+              {{ form.end_time }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Tuỳ chọn nâng cao</h6></div>
+        <div class="card-body">
+          <div class="row g-3">
+            {% for field in form %}
+              {% if field.field.widget.input_type == 'checkbox' %}
+              <div class="col-md-6">
+                <div class="form-check form-switch">
+                  {{ field }}
+                  <label class="form-check-label fw-medium">{{ field.label }}</label>
+                </div>
+              </div>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card sticky-top" style="top:80px">
+        <div class="card-body">
+          <button type="submit" class="btn btn-primary w-100 py-2 mb-2">
+            <i class="bi bi-save me-2"></i>Lưu bài kiểm tra
+          </button>
+          <a href="{% url 'exam_list' %}" class="btn btn-outline-secondary w-100">Hủy bỏ</a>
+          <hr>
+          <div class="small text-muted">
+            <i class="bi bi-lightbulb me-1 text-warning"></i>
+            Sau khi lưu, bạn có thể thêm câu hỏi vào bài thi rồi mới kích hoạt.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

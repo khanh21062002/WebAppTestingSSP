@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-pencil-square me-2 text-primary"></i>{{ title }}</h1>
+  <a href="{% url 'question_bank' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+</div>
+<form method="post" enctype="multipart/form-data" id="questionForm">
+  {% csrf_token %}
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="card mb-3">
+        <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Thông tin câu hỏi</h6></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Môn học *</label>
+              {{ form.subject }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Chủ đề</label>
+              {{ form.topic }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-medium">Loại câu hỏi *</label>
+              {{ form.question_type }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Độ khó</label>
+              {{ form.difficulty }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-medium">Điểm</label>
+              {{ form.points }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Nội dung câu hỏi *</label>
+              {{ form.content }}
+              {% if form.content.errors %}<div class="text-danger small">{{ form.content.errors }}</div>{% endif %}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Hình ảnh (tuỳ chọn)</label>
+              {{ form.image }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Giải thích đáp án</label>
+              {{ form.explanation }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Choices Section -->
+      <div class="card" id="choicesSection">
+        <div class="card-header bg-white py-3">
+          <h6 class="mb-0 fw-bold">Đáp án</h6>
+          <small class="text-muted">Đánh dấu ☑ vào đáp án đúng</small>
+        </div>
+        <div class="card-body">
+          {{ formset.management_form }}
+          <div id="choicesList">
+            {% for cf in formset %}
+            <div class="choice-row d-flex gap-2 align-items-center mb-2">
+              {{ cf.id }}
+              <div style="width:60px">{{ cf.label }}</div>
+              <div class="flex-grow-1">{{ cf.content }}</div>
+              <div class="form-check form-check-inline" title="Đáp án đúng">
+                {{ cf.is_correct }}
+              </div>
+              {% if formset.can_delete %}
+              <div class="form-check" title="Xóa">
+                {{ cf.DELETE }}
+              </div>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div id="trueFalseInfo" class="alert alert-info mt-3" style="display:none">
+        <i class="bi bi-info-circle me-2"></i>Câu hỏi Đúng/Sai sẽ tự động tạo 2 đáp án: <strong>Đúng</strong> và <strong>Sai</strong>.
+      </div>
+      <div id="essayInfo" class="alert alert-warning mt-3" style="display:none">
+        <i class="bi bi-pencil-square me-2"></i>Câu hỏi tự luận sẽ được chấm điểm thủ công.
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card sticky-top" style="top:80px">
+        <div class="card-body">
+          <button type="submit" class="btn btn-primary w-100 mb-2 py-2">
+            <i class="bi bi-save me-2"></i>Lưu câu hỏi
+          </button>
+          <a href="{% url 'question_bank' %}" class="btn btn-outline-secondary w-100">Hủy bỏ</a>
+          <hr>
+          <div class="small text-muted">
+            <strong>Hướng dẫn:</strong><br>
+            • Trắc nghiệm 1 đáp án: chọn 1 đáp án đúng<br>
+            • Trắc nghiệm nhiều đáp án: chọn ≥2 đáp án đúng<br>
+            • Đúng/Sai: hệ thống tự tạo 2 đáp án<br>
+            • Tự luận: không cần đáp án, chấm thủ công
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const qTypeSelect = document.getElementById('id_question_type');
+const choicesSection = document.getElementById('choicesSection');
+const trueFalseInfo = document.getElementById('trueFalseInfo');
+const essayInfo = document.getElementById('essayInfo');
+
+function handleTypeChange() {
+  const val = qTypeSelect.value;
+  choicesSection.style.display = (val === 'true_false' || val === 'essay') ? 'none' : '';
+  trueFalseInfo.style.display = val === 'true_false' ? '' : 'none';
+  essayInfo.style.display = val === 'essay' ? '' : 'none';
+}
+
+qTypeSelect.addEventListener('change', handleTypeChange);
+handleTypeChange();
+
+// Auto-fill choice labels A,B,C,D
+document.querySelectorAll('.choice-row').forEach((row, i) => {
+  const labelInput = row.querySelector('[name$="-label"]');
+  if (labelInput && !labelInput.value) {
+    labelInput.value = String.fromCharCode(65 + i);
+  }
+});
+</script>
+{% endblock %}

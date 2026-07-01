@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block title %}Import câu hỏi — SSP Exam{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="page-header">
+      <h1><i class="bi bi-upload me-2 text-primary"></i>Import câu hỏi</h1>
+      <a href="{% url 'question_bank' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-medium">Môn học *</label>
+            {{ form.subject }}
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-medium">File câu hỏi *</label>
+            {{ form.file }}
+            <div class="form-text">Hỗ trợ file Excel (.xlsx) và Word (.docx)</div>
+          </div>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-upload me-2"></i>Import câu hỏi
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-excel me-2 text-success"></i>Hướng dẫn định dạng file Excel (.xlsx)</h6>
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-2">Mỗi hàng là một câu hỏi, các cột theo thứ tự:</p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered small">
+            <thead class="table-light">
+              <tr><th>Cột A</th><th>Cột B</th><th>Cột C</th><th>D-H</th><th>Cột I</th><th>Cột J</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Nội dung câu hỏi</td>
+                <td>Loại<br><code>single/multiple/true_false</code></td>
+                <td>Độ khó<br><code>easy/medium/hard</code></td>
+                <td>Đáp án A, B, C, D, E</td>
+                <td>Đáp án đúng<br><code>A</code> hoặc <code>A,B</code></td>
+                <td>Giải thích</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <a href="{% url 'export_questions' %}" class="btn btn-sm btn-outline-success">
+          <i class="bi bi-download me-1"></i>Tải file mẫu Excel
+        </a>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-file-word me-2 text-primary"></i>Hướng dẫn định dạng file Word (.docx)</h6>
+      </div>
+      <div class="card-body small text-muted">
+        <pre class="bg-light p-3 rounded" style="font-size:.8rem">Câu 1: Nội dung câu hỏi ở đây?
+A. Đáp án A
+B. Đáp án B
+C. Đáp án C (đáp án đúng — đánh dấu * hoặc ghi dòng Đáp án: C)
+D. Đáp án D
+Đáp án: C
+
+Câu 2: Câu hỏi tiếp theo...</pre>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% block title %}Quản lý câu hỏi — {{ exam.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-list-check me-2 text-primary"></i>Câu hỏi bài thi</h1>
+    <p class="text-muted mb-0">{{ exam.title }}</p>
+  </div>
+  <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+</div>
+
+<div class="row g-3">
+  <!-- Current questions in exam -->
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="mb-0 fw-bold">
+          <i class="bi bi-check2-square me-2 text-success"></i>Câu hỏi đã chọn
+          <span class="badge bg-success ms-1">{{ exam_q_list|length }}</span>
+        </h6>
+      </div>
+      <div class="card-body p-0" style="max-height:60vh;overflow-y:auto">
+        <ul class="list-group list-group-flush" id="selectedList">
+          {% for eq in exam_q_list %}
+          <li class="list-group-item d-flex justify-content-between align-items-start py-2" data-eq-id="{{ eq.id }}">
+            <div class="me-2 flex-grow-1">
+              <span class="badge bg-light text-muted me-1">{{ eq.order }}</span>
+              <span class="small">{{ eq.question.content|truncatechars:70 }}</span>
+              <div>
+                <span class="badge difficulty-{{ eq.question.difficulty }} mt-1" style="font-size:.7rem">{{ eq.question.get_difficulty_display }}</span>
+              </div>
+            </div>
+            <form method="post" class="remove-form">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="remove">
+              <input type="hidden" name="question_id" value="{{ eq.question.pk }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Xóa khỏi bài thi">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </form>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-center text-muted py-4">
+            <i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem"></i>Chưa có câu hỏi
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card-footer bg-white">
+        <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-primary w-100">
+          <i class="bi bi-check-lg me-1"></i>Hoàn tất ({{ exam_q_list|length }} câu)
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Available questions -->
+  <div class="col-lg-7">
+    <div class="card mb-3">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-robot me-2 text-warning"></i>Tự động thêm câu hỏi</h6>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="auto_generate">
+          <div class="row g-2 align-items-end">
+            <div class="col-md-4">
+              <label class="form-label small fw-medium">Môn học</label>
+              {{ auto_form.subject }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-medium">Dễ</label>
+              {{ auto_form.easy_count }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-medium">T.Bình</label>
+              {{ auto_form.medium_count }}
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small fw-medium">Khó</label>
+              {{ auto_form.hard_count }}
+            </div>
+            <div class="col-md-2">
+              <button type="submit" class="btn btn-warning btn-sm w-100">
+                <i class="bi bi-magic me-1"></i>Thêm
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header bg-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-bank me-2"></i>Ngân hàng câu hỏi</h6>
+      </div>
+      <div class="table-responsive" style="max-height:50vh;overflow-y:auto">
+        <table class="table table-hover table-sm mb-0 align-middle">
+          <thead class="sticky-top bg-white"><tr>
+            <th>Nội dung</th><th>Loại</th><th>Độ khó</th><th></th>
+          </tr></thead>
+          <tbody>
+            {% for q in page_obj %}
+            <tr id="q-row-{{ q.pk }}" {% if q.pk in current_q_ids %}class="table-success"{% endif %}>
+              <td class="small">{{ q.content|truncatechars:70 }}</td>
+              <td><span class="badge bg-light text-dark" style="font-size:.7rem">{{ q.get_question_type_display }}</span></td>
+              <td><span class="badge difficulty-{{ q.difficulty }}" style="font-size:.7rem">{{ q.get_difficulty_display }}</span></td>
+              <td>
+                {% if q.pk not in current_q_ids %}
+                <form method="post" class="add-form d-inline">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="add">
+                  <input type="hidden" name="question_id" value="{{ q.pk }}">
+                  <button type="submit" class="btn btn-sm btn-outline-primary" title="Thêm vào bài thi">
+                    <i class="bi bi-plus-lg"></i>
+                  </button>
+                </form>
+                {% else %}
+                <span class="badge bg-success"><i class="bi bi-check-lg"></i></span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" class="text-center text-muted py-3">Không có câu hỏi nào khả dụng.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% if page_obj.has_other_pages %}
+      <div class="card-footer bg-white">
+        <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+          {% for num in page_obj.paginator.page_range %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>{% endfor %}
+          {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+        </ul></nav>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

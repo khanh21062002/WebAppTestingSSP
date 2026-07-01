@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block title %}Lịch sử thi — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-trophy me-2 text-warning"></i>Lịch sử thi của tôi</h1>
+  <a href="{% url 'available_exams' %}" class="btn btn-success"><i class="bi bi-journal-check me-1"></i>Vào thi</a>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead><tr>
+        <th>Bài kiểm tra</th><th>Môn học</th><th>Lần</th>
+        <th>Điểm</th><th>Phần trăm</th><th>Kết quả</th>
+        <th>Thời gian nộp</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for s in page_obj %}
+        <tr>
+          <td><span class="fw-medium">{{ s.exam.title }}</span></td>
+          <td class="text-muted small">{{ s.exam.subject.name|default:"—" }}</td>
+          <td class="text-center"><span class="badge bg-light text-muted">{{ s.attempt_number }}</span></td>
+          <td>
+            {% if s.score is not None %}
+            <strong>{{ s.score|floatformat:1 }}</strong>
+            <span class="text-muted small">/{{ s.total_points|floatformat:1 }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.percentage is not None %}
+            <div class="d-flex align-items-center gap-2">
+              <div class="progress flex-grow-1" style="height:6px;width:80px">
+                <div class="progress-bar {% if s.is_passed %}bg-success{% else %}bg-danger{% endif %}"
+                  style="width:{{ s.percentage|floatformat:0 }}%"></div>
+              </div>
+              <span class="small">{{ s.percentage|floatformat:0 }}%</span>
+            </div>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.is_passed is not None %}
+            <span class="badge {% if s.is_passed %}bg-success{% else %}bg-danger{% endif %}">
+              {% if s.is_passed %}ĐẠT{% else %}KHÔNG ĐẠT{% endif %}
+            </span>
+            {% else %}<span class="badge bg-secondary">{{ s.get_status_display }}</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ s.submitted_at|date:"d/m/Y H:i"|default:"—" }}</td>
+          <td><a href="{% url 'exam_result' s.pk %}" class="btn btn-sm btn-outline-primary">Xem kết quả</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">
+          <i class="bi bi-trophy display-5 d-block mb-2"></i>
+          Bạn chưa hoàn thành bài thi nào. <a href="{% url 'available_exams' %}">Vào thi ngay!</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-white">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>{% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

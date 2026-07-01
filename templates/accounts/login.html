@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập — SSP Exam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); }
+        .login-card { max-width: 420px; width: 100%; }
+        .brand-logo { font-size: 2rem; color: #fff; font-weight: 800; letter-spacing: -1px; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center min-vh-100 p-3">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <div class="brand-logo"><i class="bi bi-mortarboard-fill me-2"></i>SSP Exam</div>
+            <p class="text-white-50 mt-1">Hệ thống kiểm tra trực tuyến</p>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="card-title fw-bold mb-4">Đăng nhập</h5>
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+                {% endif %}
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Tên đăng nhập</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger small mt-1">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-medium">Mật khẩu</label>
+                        <div class="input-group">
+                            {{ form.password }}
+                            <button class="btn btn-outline-secondary" type="button" id="togglePwd">
+                                <i class="bi bi-eye" id="eyeIcon"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                        <i class="bi bi-box-arrow-in-right me-2"></i>Đăng nhập
+                    </button>
+                </form>
+                <hr>
+                <p class="text-center text-muted mb-0">
+                    Chưa có tài khoản?
+                    <a href="{% url 'register' %}" class="text-primary fw-semibold">Đăng ký ngay</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.getElementById('togglePwd').addEventListener('click', function () {
+            const pwd = document.getElementById('id_password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text'; icon.className = 'bi bi-eye-slash';
+            } else {
+                pwd.type = 'password'; icon.className = 'bi bi-eye';
+            }
+        });
+    </script>
+</body>
+</html>

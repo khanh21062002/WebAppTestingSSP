@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SSP - Hệ thống kiểm tra trực tuyến{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% load static %}{% static 'css/main.css' %}" rel="stylesheet">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+{% load static %}
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+    <div class="container-fluid">
+        <a class="navbar-brand fw-bold" href="{% url 'dashboard' %}">
+            <i class="bi bi-mortarboard-fill me-2"></i>SSP Exam
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navMain">
+            {% if user.is_authenticated %}
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+                       href="{% url 'dashboard' %}"><i class="bi bi-speedometer2 me-1"></i>Dashboard</a>
+                </li>
+                {% if user.can_create_exam %}
+                <li class="nav-item">
+                    <a class="nav-link {% if 'exam' in request.resolver_match.url_name %}active{% endif %}"
+                       href="{% url 'exam_list' %}"><i class="bi bi-file-earmark-text me-1"></i>Bài kiểm tra</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" data-bs-toggle="dropdown">
+                        <i class="bi bi-bank me-1"></i>Ngân hàng câu hỏi
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'question_bank' %}"><i class="bi bi-list-ul me-2"></i>Danh sách câu hỏi</a></li>
+                        <li><a class="dropdown-item" href="{% url 'question_create' %}"><i class="bi bi-plus-circle me-2"></i>Tạo câu hỏi</a></li>
+                        <li><a class="dropdown-item" href="{% url 'import_questions' %}"><i class="bi bi-upload me-2"></i>Import câu hỏi</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'subject_list' %}"><i class="bi bi-book me-2"></i>Quản lý môn học</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'available_exams' %}"><i class="bi bi-journal-check me-1"></i>Bài thi</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'my_results' %}"><i class="bi bi-trophy me-1"></i>Kết quả</a>
+                </li>
+                {% endif %}
+                {% if user.is_admin %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'user_list' %}"><i class="bi bi-people me-1"></i>Quản lý Users</a>
+                </li>
+                {% endif %}
+            </ul>
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" data-bs-toggle="dropdown">
+                        {% if user.avatar %}
+                        <img src="{{ user.avatar.url }}" class="rounded-circle" width="30" height="30" alt="avatar">
+                        {% else %}
+                        <div class="avatar-circle-sm">{{ user.first_name|first|default:user.username|first|upper }}</div>
+                        {% endif %}
+                        <span class="d-none d-md-inline">{{ user.get_full_name|default:user.username }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><span class="dropdown-item-text text-muted small">{{ user.get_role_display }}</span></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'profile' %}"><i class="bi bi-person me-2"></i>Hồ sơ</a></li>
+                        <li><a class="dropdown-item" href="{% url 'change_password' %}"><i class="bi bi-key me-2"></i>Đổi mật khẩu</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</a></li>
+                    </ul>
+                </li>
+            </ul>
+            {% else %}
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Đăng nhập</a></li>
+                <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Đăng ký</a></li>
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid py-4">
+    {% if messages %}
+    <div class="row">
+        <div class="col-12">
+            {% for msg in messages %}
+            <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ msg }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<footer class="footer mt-auto py-3 bg-light border-top">
+    <div class="container text-center">
+        <span class="text-muted small">SSP Exam System &copy; 2025 — Hệ thống kiểm tra trực tuyến</span>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

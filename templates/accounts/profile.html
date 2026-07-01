@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Hồ sơ cá nhân — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-person-circle me-2 text-primary"></i>Hồ sơ cá nhân</h1>
+</div>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="card text-center p-4">
+      {% if user.avatar %}
+        <img src="{{ user.avatar.url }}" class="rounded-circle mx-auto mb-3" width="96" height="96" style="object-fit:cover">
+      {% else %}
+        <div class="avatar-circle mx-auto mb-3" style="width:96px;height:96px;font-size:2.5rem">
+          {{ user.first_name|first|default:user.username|first|upper }}
+        </div>
+      {% endif %}
+      <h5 class="fw-bold mb-1">{{ user.get_full_name|default:user.username }}</h5>
+      <span class="badge bg-primary mb-2">{{ user.get_role_display }}</span>
+      <div class="text-muted small">{{ user.email }}</div>
+      {% if user.student_id %}
+      <div class="text-muted small mt-1">Mã NV: {{ user.student_id }}</div>
+      {% endif %}
+      {% if user.class_name %}
+      <div class="text-muted small">Phòng ban: {{ user.class_name }}</div>
+      {% endif %}
+      <div class="text-muted small mt-1">Tham gia: {{ user.date_joined|date:"d/m/Y" }}</div>
+      <a href="{% url 'change_password' %}" class="btn btn-outline-secondary mt-3 w-100">
+        <i class="bi bi-key me-1"></i>Đổi mật khẩu
+      </a>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Cập nhật thông tin</h6></div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-medium">Họ</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Tên</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Số điện thoại</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Mã nhân viên</label>
+              {{ form.student_id }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Phòng ban/Team</label>
+              {{ form.class_name }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Ảnh đại diện</label>
+              {{ form.avatar }}
+            </div>
+            <div class="col-12">
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-save me-1"></i>Lưu thay đổi
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

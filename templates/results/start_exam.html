@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% block title %}Chuẩn bị thi — {{ exam.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header bg-primary text-white py-4 text-center">
+        <h4 class="mb-1 fw-bold">{{ exam.title }}</h4>
+        {% if exam.subject %}<p class="mb-0 opacity-75"><i class="bi bi-book me-1"></i>{{ exam.subject.name }}</p>{% endif %}
+      </div>
+      <div class="card-body p-4">
+        <div class="row g-3 text-center mb-4">
+          <div class="col-3">
+            <div class="bg-light rounded p-3">
+              <div class="fw-bold text-primary fs-4">{{ exam.question_count }}</div>
+              <div class="text-muted small">Câu hỏi</div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="bg-light rounded p-3">
+              <div class="fw-bold text-warning fs-4">{{ exam.duration_minutes }}</div>
+              <div class="text-muted small">Phút</div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="bg-light rounded p-3">
+              <div class="fw-bold text-success fs-4">{{ exam.total_points }}</div>
+              <div class="text-muted small">Tổng điểm</div>
+            </div>
+          </div>
+          <div class="col-3">
+            <div class="bg-light rounded p-3">
+              <div class="fw-bold text-info fs-4">{{ exam.pass_score }}</div>
+              <div class="text-muted small">Điểm đạt</div>
+            </div>
+          </div>
+        </div>
+
+        {% if exam.description %}
+        <div class="alert alert-light border mb-4">
+          <strong>Mô tả:</strong> {{ exam.description }}
+        </div>
+        {% endif %}
+
+        <div class="alert alert-warning mb-4">
+          <h6 class="fw-bold mb-2"><i class="bi bi-exclamation-triangle me-2"></i>Lưu ý quan trọng trước khi thi:</h6>
+          <ul class="mb-0 small">
+            <li>Bạn có <strong>{{ exam.duration_minutes }} phút</strong> để hoàn thành bài thi.</li>
+            <li>Bài thi sẽ tự động nộp khi hết giờ.</li>
+            {% if exam.prevent_cheating %}
+            <li class="text-danger">Hệ thống chống gian lận đang hoạt động — không chuyển tab hoặc thoát cửa sổ.</li>
+            {% endif %}
+            {% if exam.shuffle_questions %}<li>Câu hỏi sẽ được đảo ngẫu nhiên.</li>{% endif %}
+            <li>Lần thi của bạn: <strong>{{ attempt_count|add:1 }}/{{ exam.max_attempts }}</strong></li>
+          </ul>
+        </div>
+
+        <form method="post">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-lg w-100 py-3 fw-bold">
+            <i class="bi bi-play-fill me-2"></i>Bắt đầu làm bài
+          </button>
+        </form>
+        <a href="{% url 'available_exams' %}" class="btn btn-outline-secondary w-100 mt-2">
+          <i class="bi bi-arrow-left me-1"></i>Quay lại
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

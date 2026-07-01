@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block title %}Xóa câu hỏi — SSP Exam{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card border-danger">
+      <div class="card-header bg-danger text-white py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Xác nhận xóa câu hỏi</h6>
+      </div>
+      <div class="card-body p-4">
+        <p>Bạn có chắc chắn muốn xóa câu hỏi sau?</p>
+        <div class="alert alert-light border">
+          <strong>{{ obj.content|truncatechars:200 }}</strong>
+          <div class="text-muted small mt-1">{{ obj.subject.name }} — {{ obj.get_difficulty_display }}</div>
+        </div>
+        <p class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>Hành động này không thể hoàn tác.</p>
+        <div class="d-flex gap-2">
+          <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger px-4"><i class="bi bi-trash me-1"></i>Xác nhận xóa</button>
+          </form>
+          <a href="{% url 'question_bank' %}" class="btn btn-outline-secondary">Hủy bỏ</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

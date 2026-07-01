@@ -1,0 +1,69 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — SSP Exam{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="page-header">
+      <h1><i class="bi bi-person-gear me-2 text-primary"></i>{{ title }}</h1>
+      <a href="{% url 'user_list' %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+    </div>
+    <div class="card">
+      <div class="card-body p-4">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-6">
+              <label class="form-label fw-medium">Tên đăng nhập *</label>
+              {{ form.username }}
+              {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Vai trò *</label>
+              {{ form.role }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Họ</label>
+              {{ form.first_name }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Tên</label>
+              {{ form.last_name }}
+            </div>
+            <div class="col-12">
+              <label class="form-label fw-medium">Email</label>
+              {{ form.email }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Số điện thoại</label>
+              {{ form.phone }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Mã nhân viên</label>
+              {{ form.student_id }}
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-medium">Phòng ban/Team</label>
+              {{ form.class_name }}
+            </div>
+            <div class="col-6 d-flex align-items-end">
+              <div class="form-check mb-2">
+                {{ form.is_active }}
+                <label class="form-check-label fw-medium">Tài khoản hoạt động</label>
+              </div>
+            </div>
+          </div>
+          {% if not obj %}
+          <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle me-2"></i>Mật khẩu mặc định: <strong>Abc@12345</strong> (người dùng nên đổi sau khi đăng nhập)
+          </div>
+          {% endif %}
+          <div class="d-flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary px-4"><i class="bi bi-save me-1"></i>Lưu</button>
+            <a href="{% url 'user_list' %}" class="btn btn-outline-secondary">Hủy</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

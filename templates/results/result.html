@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Kết quả — {{ session.exam.title }}{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-lg-9">
+    <!-- Score summary -->
+    <div class="card mb-4">
+      <div class="card-body p-4 text-center">
+        <h4 class="fw-bold mb-1">{{ session.exam.title }}</h4>
+        <p class="text-muted mb-4">Lần thi {{ session.attempt_number }} — {{ session.submitted_at|date:"d/m/Y H:i" }}</p>
+        <div class="row g-3 justify-content-center align-items-center">
+          <div class="col-md-3">
+            <div class="score-circle {% if session.is_passed %}passed{% else %}failed{% endif %}">
+              <div>{{ session.percentage|floatformat:0 }}%</div>
+              <div style="font-size:.9rem;font-weight:400">
+                {% if session.is_passed %}ĐẠT{% else %}KHÔNG ĐẠT{% endif %}
+              </div>
+            </div>
+          </div>
+          <div class="col-md-9">
+            <div class="row g-3">
+              <div class="col-6 col-sm-3">
+                <div class="bg-light rounded p-3">
+                  <div class="fw-bold fs-4 text-primary">{{ session.score|floatformat:1 }}</div>
+                  <div class="text-muted small">Điểm đạt được</div>
+                </div>
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="bg-light rounded p-3">
+                  <div class="fw-bold fs-4 text-secondary">{{ session.total_points|floatformat:1 }}</div>
+                  <div class="text-muted small">Tổng điểm</div>
+                </div>
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="bg-light rounded p-3">
+                  <div class="fw-bold fs-4 text-success">
+                    {{ answers|length }}
+                  </div>
+                  <div class="text-muted small">Tổng câu</div>
+                </div>
+              </div>
+              <div class="col-6 col-sm-3">
+                <div class="bg-light rounded p-3">
+                  <div class="fw-bold fs-4 text-warning">
+                    {% if session.time_spent_seconds %}
+                      {{ session.time_spent_seconds|floatformat:0|default:0 }}s
+                    {% else %}—{% endif %}
+                  </div>
+                  <div class="text-muted small">Thời gian làm</div>
+                </div>
+              </div>
+            </div>
+            <div class="mt-3">
+              <div class="progress" style="height:12px;border-radius:8px">
+                <div class="progress-bar {% if session.is_passed %}bg-success{% else %}bg-danger{% endif %}"
+                  style="width:{{ session.percentage|floatformat:0 }}%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {% if proctoring and proctoring.flagged %}
+        <div class="alert alert-danger mt-3 text-start">
+          <div class="d-flex align-items-center mb-2">
+            <i class="bi bi-shield-fill-exclamation fs-4 me-2"></i>
+            <strong class="fs-6">PHÁT HIỆN GIAN LẬN — Bài thi bị tính KHÔNG ĐẠT</strong>
+          </div>
+          <div class="row g-2 text-center">
+            <div class="col-4">
+              <div class="bg-white rounded p-2 border border-danger">
+                <div class="fw-bold fs-4 text-danger">{{ proctoring.total_violations }}</div>
+                <div class="small text-muted">Tổng lần vi phạm</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="bg-white rounded p-2 border">
+                <div class="fw-bold fs-4 text-warning">{{ proctoring.tab_switches }}</div>
+                <div class="small text-muted">Lần rời màn hình</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="bg-white rounded p-2 border">
+                <div class="fw-bold fs-5 text-danger">{{ proctoring.get_risk_level_display }}</div>
+                <div class="small text-muted">Mức độ rủi ro</div>
+              </div>
+            </div>
+          </div>
+          <div class="small mt-2 mb-0">
+            <i class="bi bi-info-circle me-1"></i>Hệ thống ghi nhận hành vi chuyển tab/thoát màn hình trong khi thi.
+            Mọi vi phạm đều khiến bài thi bị đánh trượt theo quy định.
+          </div>
+        </div>
+        {% elif proctoring %}
+        <div class="alert alert-success mt-3 text-start">
+          <i class="bi bi-shield-check me-2"></i>
+          <strong>Không phát hiện vi phạm.</strong> Bài thi được thực hiện hợp lệ.
+        </div>
+        {% endif %}
+
+        <div class="d-flex gap-2 justify-content-center mt-4">
+          <a href="{% url 'my_results' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history me-1"></i>Lịch sử thi
+          </a>
+          <a href="{% url 'available_exams' %}" class="btn btn-primary">
+            <i class="bi bi-journal-check me-1"></i>Bài thi khác
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Detailed answers -->
+    {% if session.exam.show_result_immediately or show_answers %}
+    <h5 class="fw-bold mb-3"><i class="bi bi-list-check me-2"></i>Chi tiết câu trả lời</h5>
+    {% for answer in answers %}
+    <div class="card mb-3 border-{% if answer.is_correct == True %}success{% elif answer.is_correct == False %}danger{% else %}secondary{% endif %}">
+      <div class="card-body">
+        <div class="d-flex align-items-start gap-3 mb-3">
+          <div class="flex-shrink-0">
+            {% if answer.is_correct == True %}
+            <span class="badge bg-success rounded-pill px-3 py-2">
+              <i class="bi bi-check-lg me-1"></i>+{{ answer.points_earned }}
+            </span>
+            {% elif answer.is_correct == False %}
+            <span class="badge bg-danger rounded-pill px-3 py-2">
+              <i class="bi bi-x-lg me-1"></i>0
+            </span>
+            {% else %}
+            <span class="badge bg-secondary rounded-pill px-3 py-2">Thủ công</span>
+            {% endif %}
+          </div>
+          <div class="flex-grow-1">
+            <p class="fw-medium mb-2">Câu {{ forloop.counter }}: {{ answer.exam_question.question.content }}</p>
+
+            {% if answer.exam_question.question.question_type == 'essay' %}
+            <div class="bg-light rounded p-2 small">
+              <strong>Câu trả lời của bạn:</strong><br>{{ answer.text_answer|default:"(Chưa trả lời)" }}
+            </div>
+
+            {% else %}
+            {% with q=answer.exam_question.question selected=answer.selected_choices.all %}
+            {% for choice in q.choices.all %}
+            <div class="choice-label
+              {% if show_answers and choice.is_correct %}correct-answer
+              {% elif choice in selected and not choice.is_correct %}wrong-answer
+              {% elif choice in selected %}correct-answer
+              {% endif %}">
+              <span class="badge bg-light text-dark">{{ choice.label }}</span>
+              <span class="small">{{ choice.content }}</span>
+              {% if choice in selected %}<i class="bi bi-check2 ms-auto text-primary fw-bold"></i>{% endif %}
+              {% if show_answers and choice.is_correct %}<i class="bi bi-star-fill ms-auto text-success" title="Đáp án đúng"></i>{% endif %}
+            </div>
+            {% endfor %}
+            {% endwith %}
+            {% endif %}
+
+            {% if show_answers and answer.exam_question.question.explanation %}
+            <div class="alert alert-info mt-2 small py-2 mb-0">
+              <i class="bi bi-lightbulb me-1"></i><strong>Giải thích:</strong> {{ answer.exam_question.question.explanation }}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="alert alert-secondary text-center">
+      <i class="bi bi-eye-slash me-2"></i>Đáp án chi tiết không được hiển thị cho bài thi này.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

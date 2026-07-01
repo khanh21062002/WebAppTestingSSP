@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Bài kiểm tra — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-file-earmark-text me-2 text-primary"></i>Bài kiểm tra của tôi</h1>
+  <a href="{% url 'exam_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tạo bài mới</a>
+</div>
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead><tr>
+        <th>Tiêu đề</th><th>Môn học</th><th>Loại</th>
+        <th>Câu hỏi</th><th>Thời gian</th><th>Trạng thái</th>
+        <th>Lượt thi</th><th>Thao tác</th>
+      </tr></thead>
+      <tbody>
+        {% for exam in page_obj %}
+        <tr>
+          <td>
+            <a href="{% url 'exam_detail' exam.pk %}" class="fw-semibold text-decoration-none">{{ exam.title }}</a>
+            {% if exam.is_public %}<span class="badge bg-info ms-1 small">Công khai</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ exam.subject.name|default:"—" }}</td>
+          <td><span class="badge bg-light text-dark small">{{ exam.get_exam_type_display }}</span></td>
+          <td class="text-center">{{ exam.q_count }}</td>
+          <td class="small">{{ exam.duration_minutes }} phút</td>
+          <td><span class="badge status-{{ exam.status }}">{{ exam.get_status_display }}</span></td>
+          <td class="text-center">{{ exam.session_count }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary" title="Chi tiết"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
+              {% if exam.status == 'draft' %}
+              <a href="{% url 'exam_publish' exam.pk %}" class="btn btn-sm btn-outline-success" title="Kích hoạt"><i class="bi bi-play-fill"></i></a>
+              {% elif exam.status == 'active' %}
+              <a href="{% url 'exam_end' exam.pk %}" class="btn btn-sm btn-outline-warning" title="Kết thúc"><i class="bi bi-stop-fill"></i></a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-5">
+          <i class="bi bi-file-earmark-text display-5 d-block mb-2"></i>
+          Chưa có bài kiểm tra nào. <a href="{% url 'exam_create' %}">Tạo ngay!</a>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-white">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}
+      <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
+      {% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

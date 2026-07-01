@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+{% block title %}Phân công thí sinh — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-person-check me-2 text-primary"></i>Phân công thí sinh</h1>
+    <p class="text-muted mb-0">{{ exam.title }}</p>
+  </div>
+  <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Quay lại</a>
+</div>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Giao bài cho thí sinh</h6></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-medium">Giao theo lớp</label>
+            {{ form.class_name }}
+            <div class="form-text">Tất cả nhân viên có cùng phòng ban/team sẽ được giao bài.</div>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-medium">Giao cho cá nhân (theo ID)</label>
+            {{ form.user_ids }}
+            <div class="form-text">Nhập ID người dùng, cách nhau bằng dấu phẩy.</div>
+          </div>
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-person-check me-2"></i>Giao bài
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Danh sách đã phân công</h6></div>
+      <div class="list-group list-group-flush" style="max-height:400px;overflow-y:auto">
+        {% for a in assignments %}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+          <div>
+            {% if a.user %}
+            <i class="bi bi-person me-2 text-primary"></i>
+            <span class="fw-medium">{{ a.user.get_full_name|default:a.user.username }}</span>
+            <span class="text-muted small ms-1">(ID: {{ a.user.pk }})</span>
+            {% elif a.class_name %}
+            <i class="bi bi-people me-2 text-success"></i>
+            <span class="fw-medium">Phòng ban/Team: {{ a.class_name }}</span>
+            {% endif %}
+          </div>
+          <span class="text-muted small">{{ a.assigned_at|date:"d/m H:i" }}</span>
+        </div>
+        {% empty %}
+        <div class="list-group-item text-center text-muted py-4">
+          Chưa phân công cho ai.
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

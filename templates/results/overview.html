@@ -1,0 +1,141 @@
+{% extends 'base.html' %}
+{% block title %}Thống kê — {{ exam.title }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-bar-chart me-2 text-info"></i>Thống kê kết quả</h1>
+    <p class="text-muted mb-0">{{ exam.title }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'export_results' exam.pk %}" class="btn btn-outline-success">
+      <i class="bi bi-download me-1"></i>Xuất Excel
+    </a>
+    <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i>Quay lại
+    </a>
+  </div>
+</div>
+
+<!-- Stats cards -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-2half" style="flex:1">
+    <div class="card stat-card text-center p-3">
+      <div class="stat-number text-primary">{{ stats.total|default:0 }}</div>
+      <div class="text-muted small">Tổng lượt thi</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2half" style="flex:1">
+    <div class="card stat-card success text-center p-3">
+      <div class="stat-number text-success">{{ passed }}</div>
+      <div class="text-muted small">Đạt</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2half" style="flex:1">
+    <div class="card stat-card danger text-center p-3">
+      <div class="stat-number text-danger">{{ failed }}</div>
+      <div class="text-muted small">Không đạt</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2half" style="flex:1">
+    <div class="card stat-card danger text-center p-3">
+      <div class="stat-number text-danger">{{ cheated }}</div>
+      <div class="text-muted small"><i class="bi bi-shield-exclamation me-1"></i>Gian lận</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-2half" style="flex:1">
+    <div class="card stat-card warning text-center p-3">
+      <div class="stat-number text-warning">{{ stats.avg_score|floatformat:1|default:"—" }}</div>
+      <div class="text-muted small">Điểm TB</div>
+    </div>
+  </div>
+</div>
+
+<!-- Pass rate progress -->
+{% if stats.total %}
+<div class="card mb-4">
+  <div class="card-body">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <span class="fw-medium">Tỉ lệ đạt</span>
+      <span class="fw-bold text-success">
+        {% widthratio passed stats.total 100 %}%
+      </span>
+    </div>
+    <div class="progress" style="height:16px;border-radius:8px">
+      <div class="progress-bar bg-success" style="width:{% widthratio passed stats.total 100 %}%"></div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Sessions table -->
+<div class="card">
+  <div class="card-header bg-white py-3">
+    <h6 class="mb-0 fw-bold">Danh sách kết quả chi tiết</h6>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle small">
+      <thead><tr>
+        <th>#</th><th>Thí sinh</th><th>Mã NV</th><th>Phòng ban</th>
+        <th>Lần</th><th>Điểm</th><th>%</th><th>Kết quả</th>
+        <th>Nộp lúc</th><th>G.lận</th><th></th>
+      </tr></thead>
+      <tbody>
+        {% for s in page_obj %}
+        <tr>
+          <td class="text-muted">{{ forloop.counter }}</td>
+          <td><strong>{{ s.user.get_full_name|default:s.user.username }}</strong></td>
+          <td class="text-muted">{{ s.user.student_id|default:"—" }}</td>
+          <td class="text-muted">{{ s.user.class_name|default:"—" }}</td>
+          <td class="text-center">{{ s.attempt_number }}</td>
+          <td>
+            {% if s.score is not None %}
+            <strong>{{ s.score|floatformat:1 }}</strong>/{{ s.total_points|floatformat:0 }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.percentage is not None %}
+            <span class="{% if s.is_passed %}text-success{% else %}text-danger{% endif %} fw-medium">
+              {{ s.percentage|floatformat:0 }}%
+            </span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if s.is_passed is not None %}
+            <span class="badge {% if s.is_passed %}bg-success{% else %}bg-danger{% endif %}">
+              {% if s.is_passed %}ĐẠT{% else %}RỚT{% endif %}
+            </span>
+            {% else %}
+            <span class="badge bg-secondary">{{ s.get_status_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-muted">{{ s.submitted_at|date:"d/m H:i"|default:"—" }}</td>
+          <td>
+            {% if s.proctoring_report.flagged %}
+            <span class="badge bg-danger" title="{{ s.proctoring_report.tab_switches }} lần rời màn hình">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ s.proctoring_report.total_violations }} vi phạm
+            </span>
+            {% elif s.proctoring_report %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle">
+              <i class="bi bi-shield-check me-1"></i>Hợp lệ
+            </span>
+            {% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td><a href="{% url 'exam_result' s.pk %}" class="btn btn-sm btn-outline-secondary">Xem</a></td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="11" class="text-center text-muted py-4">Chưa có lượt thi nào.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-white">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+      {% for num in page_obj.paginator.page_range %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>{% endfor %}
+      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

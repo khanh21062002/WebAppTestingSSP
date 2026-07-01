@@ -1,0 +1,331 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ exam.title }} — Đang làm bài</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="{% static 'css/main.css' %}" rel="stylesheet">
+  <style>
+    body { user-select: none; }
+    .exam-header { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 2px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+
+<!-- Proctoring warning banner -->
+<div id="proctor-warning" class="alert alert-danger shadow-lg rounded-3 text-center py-2 px-4">
+  <i class="bi bi-exclamation-triangle-fill me-2"></i>
+  <span id="proctor-msg">Cảnh báo gian lận!</span>
+</div>
+
+<!-- Exam Header -->
+<div class="exam-header px-3 py-2">
+  <div class="d-flex align-items-center justify-content-between">
+    <div class="fw-bold text-truncate me-3" style="max-width:40%">
+      <i class="bi bi-file-earmark-text text-primary me-2"></i>{{ exam.title }}
+    </div>
+    <div class="text-center">
+      <div id="countdown-timer">--:--</div>
+      <div class="text-muted" style="font-size:.7rem">Thời gian còn lại</div>
+    </div>
+    <div class="d-flex gap-2">
+      <span class="badge bg-light text-dark">
+        <i class="bi bi-question-circle me-1"></i>{{ exam_questions|length }} câu
+      </span>
+      <button class="btn btn-success btn-sm px-3" id="submitBtn" onclick="confirmSubmit()">
+        <i class="bi bi-check-lg me-1"></i>Nộp bài
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="container-fluid py-3">
+  <div class="row g-3">
+
+    <!-- Question list -->
+    <div class="col-lg-9">
+      {% for item in exam_questions %}
+      <div class="card question-card mb-3" id="question-{{ forloop.counter }}">
+        <div class="card-body">
+          <div class="d-flex align-items-start gap-3 mb-3">
+            <span class="badge bg-primary rounded-pill px-3 py-2 flex-shrink-0">Câu {{ forloop.counter }}</span>
+            <div>
+              <p class="mb-1 fw-medium">{{ item.eq.question.content }}</p>
+              {% if item.eq.question.image %}
+              <img src="{{ item.eq.question.image.url }}" class="img-fluid rounded mt-2" style="max-height:250px">
+              {% endif %}
+              <span class="badge difficulty-{{ item.eq.question.difficulty }} small">{{ item.eq.question.get_difficulty_display }}</span>
+              <span class="badge bg-light text-muted small ms-1">{{ item.eq.question.get_question_type_display }}</span>
+            </div>
+          </div>
+
+          {% if item.eq.question.question_type == 'essay' %}
+          <textarea class="form-control essay-answer" rows="5" placeholder="Nhập câu trả lời của bạn..."
+            data-eq-id="{{ item.eq.id }}" data-session="{{ session.pk }}">{{ item.answer.text_answer }}</textarea>
+
+          {% elif item.eq.question.question_type == 'multiple' %}
+          <div class="choices-group" data-eq-id="{{ item.eq.id }}" data-type="multiple">
+            {% for choice in item.choices %}
+            <label class="choice-label">
+              <input type="checkbox" name="choice_{{ item.eq.id }}" value="{{ choice.pk }}"
+                {% if choice.pk in item.selected_ids %}checked{% endif %}
+                onchange="saveAnswer({{ item.eq.id }}, 'multiple')">
+              <span class="badge bg-light text-dark me-1">{{ choice.label }}</span>
+              <span>{{ choice.content }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          {% elif item.eq.question.question_type == 'true_false' %}
+          <div class="choices-group" data-eq-id="{{ item.eq.id }}" data-type="single">
+            {% for choice in item.choices %}
+            <label class="choice-label">
+              <input type="radio" name="choice_{{ item.eq.id }}" value="{{ choice.pk }}"
+                {% if choice.pk in item.selected_ids %}checked{% endif %}
+                onchange="saveAnswer({{ item.eq.id }}, 'single')">
+              <span class="fw-medium">{{ choice.content }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          {% else %}
+          <div class="choices-group" data-eq-id="{{ item.eq.id }}" data-type="single">
+            {% for choice in item.choices %}
+            <label class="choice-label">
+              <input type="radio" name="choice_{{ item.eq.id }}" value="{{ choice.pk }}"
+                {% if choice.pk in item.selected_ids %}checked{% endif %}
+                onchange="saveAnswer({{ item.eq.id }}, 'single')">
+              <span class="badge bg-light text-dark me-1">{{ choice.label }}</span>
+              <span>{{ choice.content }}</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+
+      <div class="d-grid mt-3 mb-5">
+        <button class="btn btn-success btn-lg py-3 fw-bold" onclick="confirmSubmit()">
+          <i class="bi bi-check2-all me-2"></i>Nộp bài kiểm tra
+        </button>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+      <div class="exam-sidebar">
+        <div class="card mb-3">
+          <div class="card-body text-center">
+            <div class="text-muted small mb-1">Thời gian còn lại</div>
+            <div id="countdown-timer-2" class="fw-bold" style="font-size:2rem;letter-spacing:2px">--:--</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header bg-white py-2">
+            <h6 class="mb-0 fw-bold small">Điều hướng câu hỏi</h6>
+          </div>
+          <div class="card-body">
+            <div class="d-flex flex-wrap gap-1" id="navGrid">
+              {% for item in exam_questions %}
+              <button class="question-nav-btn {% if item.selected_ids or item.answer.text_answer %}answered{% endif %}"
+                id="nav-{{ forloop.counter }}"
+                onclick="scrollToQuestion({{ forloop.counter }})">{{ forloop.counter }}</button>
+              {% endfor %}
+            </div>
+            <div class="d-flex gap-2 mt-3 small">
+              <span class="d-flex align-items-center gap-1"><span style="width:16px;height:16px;background:#2563eb;border-radius:4px;display:inline-block"></span> Đã trả lời</span>
+              <span class="d-flex align-items-center gap-1"><span style="width:16px;height:16px;border:2px solid #e2e8f0;border-radius:4px;display:inline-block"></span> Chưa trả lời</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Submit confirmation modal -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title fw-bold"><i class="bi bi-check2-circle me-2 text-success"></i>Xác nhận nộp bài</h5>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn nộp bài không?</p>
+        <div id="unanswered-warning" class="alert alert-warning" style="display:none">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          Còn <strong id="unanswered-count"></strong> câu chưa trả lời!
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Tiếp tục làm bài</button>
+        <form method="post" action="{% url 'submit_exam' session.pk %}" id="submitForm">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success px-4">
+            <i class="bi bi-check-lg me-1"></i>Nộp bài ngay
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const SESSION_PK = {{ session.pk }};
+const REMAINING_SECONDS = {{ remaining_seconds|default:0 }};
+const PREVENT_CHEATING = {{ exam.prevent_cheating|yesno:"true,false" }};
+const CSRF_TOKEN = '{{ csrf_token }}';
+const LOG_URL = "{% url 'log_proctoring' session.pk %}";
+const SAVE_URL = "{% url 'save_answer' session.pk %}";
+
+// ── Countdown timer ──
+let timeLeft = REMAINING_SECONDS;
+const timerEls = [document.getElementById('countdown-timer'), document.getElementById('countdown-timer-2')];
+
+function updateTimer() {
+  if (timeLeft <= 0) {
+    timerEls.forEach(el => { if(el) el.textContent = '00:00'; });
+    document.getElementById('submitForm').submit();
+    return;
+  }
+  const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const s = (timeLeft % 60).toString().padStart(2, '0');
+  const display = `${m}:${s}`;
+  timerEls.forEach(el => {
+    if (!el) return;
+    el.textContent = display;
+    el.className = timeLeft <= 60 ? (timeLeft <= 30 ? 'danger' : 'warning') : '';
+  });
+  timeLeft--;
+}
+updateTimer();
+const timerInterval = setInterval(updateTimer, 1000);
+
+// ── Save answer ──
+function saveAnswer(eqId, type) {
+  const inputs = document.querySelectorAll(`input[name="choice_${eqId}"]`);
+  const selectedIds = [];
+  inputs.forEach(inp => { if (inp.checked) selectedIds.push(parseInt(inp.value)); });
+
+  fetch(SAVE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ exam_question_id: eqId, choice_ids: selectedIds })
+  });
+
+  // Update nav button
+  const navBtns = document.querySelectorAll('.question-nav-btn');
+  const groups = document.querySelectorAll('.choices-group');
+  groups.forEach((g, i) => {
+    if (parseInt(g.dataset.eqId) === eqId) {
+      const btn = navBtns[i];
+      if (btn) btn.classList.toggle('answered', selectedIds.length > 0);
+    }
+  });
+}
+
+// Essay auto-save
+document.querySelectorAll('.essay-answer').forEach(ta => {
+  let debounce;
+  ta.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => {
+      const eqId = parseInt(ta.dataset.eqId);
+      fetch(SAVE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ exam_question_id: eqId, choice_ids: [], text_answer: ta.value })
+      });
+    }, 800);
+  });
+});
+
+// ── Navigation ──
+function scrollToQuestion(num) {
+  const el = document.getElementById(`question-${num}`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('.question-nav-btn').forEach((b, i) => {
+    b.classList.toggle('current', i + 1 === num);
+  });
+}
+
+// ── Submit ──
+function confirmSubmit() {
+  const navBtns = document.querySelectorAll('.question-nav-btn');
+  const unanswered = Array.from(navBtns).filter(b => !b.classList.contains('answered')).length;
+  const warn = document.getElementById('unanswered-warning');
+  if (unanswered > 0) {
+    warn.style.display = '';
+    document.getElementById('unanswered-count').textContent = unanswered;
+  } else {
+    warn.style.display = 'none';
+  }
+  new bootstrap.Modal(document.getElementById('submitModal')).show();
+}
+
+// ── Anti-cheat proctoring ──
+function logEvent(eventType, description = '') {
+  if (!PREVENT_CHEATING) return;
+  fetch(LOG_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ event_type: eventType, description })
+  });
+  showWarning(description || 'Hành vi vi phạm được ghi nhận!');
+}
+
+function showWarning(msg) {
+  const banner = document.getElementById('proctor-warning');
+  document.getElementById('proctor-msg').textContent = msg;
+  banner.style.display = 'block';
+  setTimeout(() => { banner.style.display = 'none'; }, 4000);
+}
+
+if (PREVENT_CHEATING) {
+  // Block right-click
+  document.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    logEvent('right_click', 'Nhấp chuột phải bị chặn');
+  });
+
+  // Block copy/paste
+  document.addEventListener('copy', e => { e.preventDefault(); logEvent('copy_paste', 'Sao chép bị chặn'); });
+  document.addEventListener('cut',  e => { e.preventDefault(); logEvent('copy_paste', 'Cắt bị chặn'); });
+  document.addEventListener('paste',e => { e.preventDefault(); logEvent('copy_paste', 'Dán bị chặn'); });
+
+  // Tab / window visibility change
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) logEvent('tab_switch', 'Rời khỏi tab thi — vi phạm!');
+  });
+
+  // Window blur
+  window.addEventListener('blur', () => logEvent('window_blur', 'Chuyển sang cửa sổ khác — vi phạm!'));
+
+  // Block F12 / devtools shortcuts
+  document.addEventListener('keydown', e => {
+    if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I','J','C'].includes(e.key))) {
+      e.preventDefault();
+      logEvent('devtools', 'Mở DevTools bị chặn');
+    }
+  });
+
+  // Request fullscreen on start
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      logEvent('fullscreen_exit', 'Thoát toàn màn hình');
+      showWarning('Vui lòng không thoát khỏi chế độ toàn màn hình!');
+    }
+  });
+}
+</script>
+</body>
+</html>

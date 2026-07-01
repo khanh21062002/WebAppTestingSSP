@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% block title %}Quản lý người dùng — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-people me-2 text-primary"></i>Quản lý người dùng</h1>
+  <a href="{% url 'user_create' %}" class="btn btn-primary"><i class="bi bi-person-plus me-1"></i>Thêm tài khoản</a>
+</div>
+<div class="card">
+  <div class="card-body pb-0">
+    <form class="row g-2 mb-3" method="get">
+      <div class="col-md-6">
+        <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Tìm kiếm tên, username, email...">
+      </div>
+      <div class="col-md-3">
+        <select name="role" class="form-select">
+          <option value="">Tất cả vai trò</option>
+          {% for val, label in role_choices %}
+          <option value="{{ val }}" {% if role == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search me-1"></i>Tìm kiếm</button>
+      </div>
+    </form>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead><tr>
+        <th>#</th><th>Họ tên</th><th>Username</th><th>Email</th>
+        <th>Vai trò</th><th>Phòng ban</th><th>Trạng thái</th><th>Thao tác</th>
+      </tr></thead>
+      <tbody>
+        {% for u in page_obj %}
+        <tr>
+          <td class="text-muted small">{{ u.pk }}</td>
+          <td><strong>{{ u.get_full_name|default:"—" }}</strong></td>
+          <td>{{ u.username }}</td>
+          <td class="text-muted small">{{ u.email }}</td>
+          <td><span class="badge bg-secondary">{{ u.get_role_display }}</span></td>
+          <td class="small">{{ u.class_name|default:"—" }}</td>
+          <td>
+            {% if u.is_active %}
+            <span class="badge bg-success">Hoạt động</span>
+            {% else %}
+            <span class="badge bg-danger">Đã khóa</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'user_edit' u.pk %}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-pencil"></i>
+              </a>
+              <form method="post" action="{% url 'user_toggle' u.pk %}" style="display:inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm {% if u.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                  title="{% if u.is_active %}Khóa{% else %}Mở khóa{% endif %}">
+                  <i class="bi {% if u.is_active %}bi-lock{% else %}bi-unlock{% endif %}"></i>
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Không tìm thấy người dùng nào.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if page_obj.has_other_pages %}
+  <div class="card-footer bg-white">
+    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+      {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&role={{ role }}">&laquo;</a></li>
+      {% endif %}
+      {% for num in page_obj.paginator.page_range %}
+      <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+        <a class="page-link" href="?page={{ num }}&q={{ q }}&role={{ role }}">{{ num }}</a>
+      </li>
+      {% endfor %}
+      {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&role={{ role }}">&raquo;</a></li>
+      {% endif %}
+    </ul></nav>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

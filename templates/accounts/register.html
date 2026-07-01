@@ -1,0 +1,82 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký — SSP Exam</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="{% static 'css/main.css' %}" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%); }
+        .register-card { max-width: 520px; width: 100%; }
+    </style>
+</head>
+<body class="d-flex align-items-center justify-content-center min-vh-100 p-3">
+    <div class="register-card my-4">
+        <div class="text-center mb-4">
+            <div class="brand-logo" style="font-size:2rem;color:#fff;font-weight:800;">
+                <i class="bi bi-mortarboard-fill me-2"></i>SSP Exam
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body p-4">
+                <h5 class="card-title fw-bold mb-4">Tạo tài khoản mới</h5>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-medium">Họ</label>
+                            {{ form.first_name }}
+                            {% if form.first_name.errors %}<div class="text-danger small">{{ form.first_name.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium">Tên</label>
+                            {{ form.last_name }}
+                            {% if form.last_name.errors %}<div class="text-danger small">{{ form.last_name.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Tên đăng nhập</label>
+                            {{ form.username }}
+                            {% if form.username.errors %}<div class="text-danger small">{{ form.username.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium">Mã nhân viên</label>
+                            {{ form.student_id }}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-medium">Phòng ban/Team</label>
+                            {{ form.class_name }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Mật khẩu</label>
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}<div class="text-danger small">{{ form.password1.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-medium">Xác nhận mật khẩu</label>
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}<div class="text-danger small">{{ form.password2.errors }}</div>{% endif %}
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold">
+                                <i class="bi bi-person-plus me-2"></i>Đăng ký
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                <hr>
+                <p class="text-center text-muted mb-0">
+                    Đã có tài khoản? <a href="{% url 'login' %}" class="text-primary fw-semibold">Đăng nhập</a>
+                </p>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

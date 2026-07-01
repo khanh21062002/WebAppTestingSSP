@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+{% block title %}Bài thi hiện có — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-journal-check me-2 text-success"></i>Bài thi dành cho bạn</h1>
+</div>
+<div class="row g-3">
+  {% for exam in exams %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <h6 class="fw-bold mb-0">{{ exam.title }}</h6>
+          <span class="badge bg-success ms-2">Đang mở</span>
+        </div>
+        {% if exam.subject %}
+        <div class="text-muted small mb-2"><i class="bi bi-book me-1"></i>{{ exam.subject.name }}</div>
+        {% endif %}
+        {% if exam.description %}
+        <p class="text-muted small mb-3">{{ exam.description|truncatechars:100 }}</p>
+        {% endif %}
+        <div class="row g-2 text-center mb-3">
+          <div class="col-4">
+            <div class="bg-light rounded p-2">
+              <div class="fw-bold text-primary">{{ exam.duration_minutes }}</div>
+              <div class="text-muted" style="font-size:.72rem">Phút</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="bg-light rounded p-2">
+              <div class="fw-bold text-success">{{ exam.question_count }}</div>
+              <div class="text-muted" style="font-size:.72rem">Câu hỏi</div>
+            </div>
+          </div>
+          <div class="col-4">
+            <div class="bg-light rounded p-2">
+              <div class="fw-bold text-warning">{{ exam.total_points }}</div>
+              <div class="text-muted" style="font-size:.72rem">Điểm</div>
+            </div>
+          </div>
+        </div>
+        {% if exam.end_time %}
+        <div class="text-muted small mb-3">
+          <i class="bi bi-clock me-1"></i>Hết hạn: {{ exam.end_time|date:"d/m/Y H:i" }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white border-top-0">
+        <a href="{% url 'start_exam' exam.pk %}" class="btn btn-success w-100">
+          <i class="bi bi-play-fill me-1"></i>Vào thi ngay
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-journal-x display-5 d-block mb-3"></i>
+        <h5>Hiện không có bài thi nào dành cho bạn</h5>
+        <p>Vui lòng liên hệ giáo viên để được giao bài thi.</p>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

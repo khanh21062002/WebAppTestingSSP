@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}{{ exam.title }} — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1><i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ exam.title }}</h1>
+    <span class="badge status-{{ exam.status }} me-1">{{ exam.get_status_display }}</span>
+    <span class="badge bg-light text-dark">{{ exam.get_exam_type_display }}</span>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil me-1"></i>Sửa</a>
+    {% if exam.status == 'draft' %}
+    <a href="{% url 'exam_publish' exam.pk %}" class="btn btn-success"><i class="bi bi-play-fill me-1"></i>Kích hoạt</a>
+    {% elif exam.status == 'active' %}
+    <a href="{% url 'exam_end' exam.pk %}" class="btn btn-warning"><i class="bi bi-stop-fill me-1"></i>Kết thúc</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="stat-number text-primary">{{ exam.question_count }}</div>
+      <div class="text-muted small">Câu hỏi</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="stat-number text-warning">{{ exam.duration_minutes }}</div>
+      <div class="text-muted small">Phút</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="stat-number text-success">{{ exam.total_points }}</div>
+      <div class="text-muted small">Tổng điểm</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="card text-center p-3">
+      <div class="stat-number text-info">{{ sessions|length }}</div>
+      <div class="text-muted small">Lượt thi</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <!-- Questions -->
+    <div class="card mb-3">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-list-ol me-2"></i>Danh sách câu hỏi</h6>
+        <div class="d-flex gap-2">
+          <a href="{% url 'exam_questions' exam.pk %}" class="btn btn-sm btn-outline-primary">
+            <i class="bi bi-pencil me-1"></i>Quản lý câu hỏi
+          </a>
+        </div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle small">
+          <thead><tr><th width="40">#</th><th>Nội dung</th><th>Loại</th><th>Độ khó</th><th>Điểm</th></tr></thead>
+          <tbody>
+            {% for eq in exam_questions %}
+            <tr>
+              <td class="text-muted">{{ eq.order }}</td>
+              <td>{{ eq.question.content|truncatechars:80 }}</td>
+              <td><span class="badge bg-light text-dark">{{ eq.question.get_question_type_display }}</span></td>
+              <td><span class="badge difficulty-{{ eq.question.difficulty }}">{{ eq.question.get_difficulty_display }}</span></td>
+              <td>{{ eq.get_points }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">
+              Chưa có câu hỏi. <a href="{% url 'exam_questions' exam.pk %}">Thêm ngay!</a>
+            </td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="card">
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h6 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Lượt thi gần đây</h6>
+        <a href="{% url 'exam_results_overview' exam.pk %}" class="btn btn-sm btn-outline-secondary">Xem tất cả</a>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 small align-middle">
+          <thead><tr><th>Thí sinh</th><th>Bắt đầu</th><th>Điểm</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody>
+            {% for s in sessions %}
+            <tr>
+              <td><strong>{{ s.user.get_full_name|default:s.user.username }}</strong></td>
+              <td class="text-muted">{{ s.started_at|date:"d/m H:i" }}</td>
+              <td>
+                {% if s.score is not None %}
+                <span class="badge {% if s.is_passed %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ s.score }}/{{ s.total_points }}
+                </span>
+                {% else %}<span class="text-muted">—</span>{% endif %}
+              </td>
+              <td>
+                <span class="badge {% if s.status == 'submitted' %}bg-success{% elif s.status == 'timed_out' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                  {{ s.get_status_display }}
+                </span>
+              </td>
+              <td><a href="{% url 'exam_result' s.pk %}" class="btn btn-sm btn-outline-secondary">Xem</a></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted py-3">Chưa có lượt thi nào.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold">Thông tin bài thi</h6></div>
+      <div class="list-group list-group-flush small">
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Môn học</span><strong>{{ exam.subject.name|default:"—" }}</strong>
+        </div>
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Thời gian</span><strong>{{ exam.duration_minutes }} phút</strong>
+        </div>
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Điểm đạt</span><strong>{{ exam.pass_score }}/{{ exam.total_points }}</strong>
+        </div>
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Lần thi tối đa</span><strong>{{ exam.max_attempts }}</strong>
+        </div>
+        {% if exam.start_time %}
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Bắt đầu</span><strong>{{ exam.start_time|date:"d/m/Y H:i" }}</strong>
+        </div>
+        {% endif %}
+        {% if exam.end_time %}
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Kết thúc</span><strong>{{ exam.end_time|date:"d/m/Y H:i" }}</strong>
+        </div>
+        {% endif %}
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Đảo câu hỏi</span>
+          <i class="bi {% if exam.shuffle_questions %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %}"></i>
+        </div>
+        <div class="list-group-item d-flex justify-content-between">
+          <span class="text-muted">Chống gian lận</span>
+          <i class="bi {% if exam.prevent_cheating %}bi-check-circle-fill text-success{% else %}bi-x-circle-fill text-danger{% endif %}"></i>
+        </div>
+      </div>
+    </div>
+    <div class="d-grid gap-2">
+      <a href="{% url 'exam_assign' exam.pk %}" class="btn btn-outline-primary">
+        <i class="bi bi-person-check me-2"></i>Phân công thí sinh
+      </a>
+      <a href="{% url 'exam_results_overview' exam.pk %}" class="btn btn-outline-info">
+        <i class="bi bi-bar-chart me-2"></i>Xem thống kê
+      </a>
+      <a href="{% url 'export_results' exam.pk %}" class="btn btn-outline-success">
+        <i class="bi bi-download me-2"></i>Xuất kết quả Excel
+      </a>
+      <a href="{% url 'exam_delete' exam.pk %}" class="btn btn-outline-danger">
+        <i class="bi bi-trash me-2"></i>Xóa bài thi
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

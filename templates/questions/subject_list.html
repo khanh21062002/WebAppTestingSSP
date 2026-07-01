@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}Quản lý môn học — SSP Exam{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1><i class="bi bi-book me-2 text-primary"></i>Quản lý môn học</h1>
+  <a href="{% url 'subject_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Thêm môn học</a>
+</div>
+<div class="row g-3">
+  {% for s in subjects %}
+  <div class="col-md-4 col-lg-3">
+    <div class="card h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <h6 class="fw-bold mb-1">{{ s.name }}</h6>
+            {% if s.code %}<span class="badge bg-light text-muted">{{ s.code }}</span>{% endif %}
+          </div>
+          <span class="badge bg-primary rounded-pill">{{ s.question_count }}</span>
+        </div>
+        {% if s.description %}
+        <p class="text-muted small mt-2 mb-0">{{ s.description|truncatechars:80 }}</p>
+        {% endif %}
+      </div>
+      <div class="card-footer bg-white border-top-0">
+        <a href="{% url 'question_bank' %}?subject={{ s.pk }}" class="btn btn-sm btn-outline-primary w-100">
+          <i class="bi bi-list-ul me-1"></i>Xem câu hỏi ({{ s.question_count }})
+        </a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body text-center py-5 text-muted">
+        <i class="bi bi-book display-5 d-block mb-3"></i>
+        Chưa có môn học nào. <a href="{% url 'subject_create' %}">Thêm ngay!</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
