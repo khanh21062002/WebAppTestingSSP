@@ -3,11 +3,23 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-ej6u5np^u9+y$4xe8iz-l+klxt8%bnaqw%xg6&x^83ceu(-8rl'
+# ── Cấu hình qua biến môi trường (production); fallback cho local dev ──
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-ej6u5np^u9+y$4xe8iz-l+klxt8%bnaqw%xg6&x^83ceu(-8rl'  # chỉ dùng local
+)
 
-DEBUG = True
+# Production: đặt biến môi trường DEBUG=False
+DEBUG = os.environ.get('DEBUG', 'True').lower() != 'false'
 
-ALLOWED_HOSTS = ['*']
+# Production: ALLOWED_HOSTS="ten-app.vercel.app,tenmiencuaban.com"
+ALLOWED_HOSTS = [h.strip() for h in os.environ.get('ALLOWED_HOSTS', '*').split(',') if h.strip()]
+
+# Tin cậy origin HTTPS khi chạy sau proxy (Vercel/Render/PythonAnywhere)
+CSRF_TRUSTED_ORIGINS = ['https://*.vercel.app', 'https://*.onrender.com', 'https://*.pythonanywhere.com'] + [
+    o.strip() for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o.strip()
+]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -30,6 +42,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # phục vụ static files ở production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -57,9 +70,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'WebAppTestingSSP.wsgi.application'
 
-# Database - PostgreSQL (switch from SQLite for production)
-# For local dev, uses SQLite. Set USE_POSTGRES=1 to switch.
-if os.environ.get('USE_POSTGRES'):
+# Database — ưu tiên DATABASE_URL (Neon/Supabase/Render Postgres),
+# rồi USE_POSTGRES (Postgres tự cấu hình), cuối cùng SQLite cho local dev.
+if os.environ.get('DATABASE_URL'):
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
+    }
+elif os.environ.get('USE_POSTGRES'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -93,6 +111,11 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# WhiteNoise: nén + cache-bust static files ở production
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'},
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
