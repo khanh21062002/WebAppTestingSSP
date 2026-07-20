@@ -6,9 +6,12 @@ urlpatterns = [
     path('create/', views.question_create_view, name='question_create'),
     path('<int:pk>/edit/', views.question_edit_view, name='question_edit'),
     path('<int:pk>/delete/', views.question_delete_view, name='question_delete'),
+    path('bulk-delete/', views.question_bulk_delete_view, name='question_bulk_delete'),
     path('import/', views.import_questions_view, name='import_questions'),
     path('export/', views.export_questions_view, name='export_questions'),
     path('subjects/', views.subject_list_view, name='subject_list'),
     path('subjects/create/', views.subject_create_view, name='subject_create'),
     path('ajax/topics/', views.get_topics_ajax, name='get_topics_ajax'),
+    path('ajax/topics/create/', views.topic_create_ajax, name='topic_create_ajax'),
+    path('import/template/', views.download_import_template_view, name='import_template'),
 ]

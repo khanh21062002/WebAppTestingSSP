@@ -72,6 +72,15 @@ def take_exam_view(request, session_pk):
     if session.status != ExamSession.STATUS_IN_PROGRESS:
         return redirect('exam_result', session_pk=session.pk)
 
+    # Đề bị tạm dừng / kết thúc bởi admin -> đưa thí sinh ra ngoài (giữ nguyên bài làm)
+    if session.exam.status != Exam.STATUS_ACTIVE:
+        if session.exam.status == Exam.STATUS_PAUSED:
+            messages.warning(request, 'Bài kiểm tra đang được TẠM DỪNG để chỉnh sửa. '
+                                      'Vui lòng chờ và vào lại sau — bài làm của bạn đã được lưu.')
+        else:
+            messages.info(request, 'Bài kiểm tra đã kết thúc.')
+        return redirect('available_exams')
+
     if session.is_time_expired():
         _auto_submit(session)
         messages.warning(request, 'Hết giờ! Bài thi đã được nộp tự động.')
@@ -117,6 +126,8 @@ def save_answer_view(request, session_pk):
     session = get_object_or_404(ExamSession, pk=session_pk, user=request.user)
     if session.status != ExamSession.STATUS_IN_PROGRESS:
         return JsonResponse({'status': 'error', 'message': 'Phiên thi đã kết thúc'})
+    if session.exam.status != Exam.STATUS_ACTIVE:
+        return JsonResponse({'status': 'paused', 'message': 'Bài kiểm tra đang tạm dừng'})
 
     data = json.loads(request.body)
     eq_id = data.get('exam_question_id')
@@ -129,6 +140,16 @@ def save_answer_view(request, session_pk):
     answer.save()
 
     return JsonResponse({'status': 'saved'})
+
+
+@login_required
+def session_heartbeat_view(request, session_pk):
+    """Trang làm bài poll định kỳ để phát hiện đề bị tạm dừng/kết thúc."""
+    session = get_object_or_404(ExamSession, pk=session_pk, user=request.user)
+    return JsonResponse({
+        'exam_status': session.exam.status,
+        'session_status': session.status,
+    })
 
 
 @login_required
@@ -195,12 +216,19 @@ def exam_result_view(request, session_pk):
     proctoring = getattr(session, 'proctoring_report', None)
     # Người tạo đề / admin luôn xem được đáp án đúng để chấm/đối chiếu
     show_answers = session.exam.show_correct_answers or is_exam_creator or is_admin
+
+    # Số lượt thi còn lại (cho nút "Thi lại" của chính thí sinh)
+    attempts_used = ExamSession.objects.filter(user=session.user, exam=session.exam).count()
+    attempts_left = max(0, session.exam.max_attempts - attempts_used)
+
     return render(request, 'results/result.html', {
         'session': session,
         'answers': answers,
         'proctoring': proctoring,
         'show_answers': show_answers,
         'is_staff_view': is_exam_creator or is_admin,
+        'is_owner': is_owner,
+        'attempts_left': attempts_left,
     })
 
 

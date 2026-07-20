@@ -8,9 +8,16 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
   <link href="{% static 'css/main.css' %}" rel="stylesheet">
+  <script>
+    // Đồng bộ chế độ Sáng/Tối với lựa chọn ở giao diện tài khoản
+    (function () {
+      var t = localStorage.getItem('ssp-theme') || 'light';
+      document.documentElement.setAttribute('data-bs-theme', t);
+    })();
+  </script>
   <style>
     body { user-select: none; }
-    .exam-header { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 2px solid #e2e8f0; }
+    .exam-header { position: sticky; top: 0; z-index: 100; background: var(--bs-body-bg); border-bottom: 2px solid var(--bs-border-color); }
   </style>
 </head>
 <body>
@@ -52,7 +59,7 @@
         <div class="card-body">
           <div class="d-flex align-items-start gap-3 mb-3">
             <span class="badge bg-primary rounded-pill px-3 py-2 flex-shrink-0">Câu {{ forloop.counter }}</span>
-            <div>
+            <div class="flex-grow-1">
               <p class="mb-1 fw-medium">{{ item.eq.question.content }}</p>
               {% if item.eq.question.image %}
               <img src="{{ item.eq.question.image.url }}" class="img-fluid rounded mt-2" style="max-height:250px">
@@ -60,6 +67,9 @@
               <span class="badge difficulty-{{ item.eq.question.difficulty }} small">{{ item.eq.question.get_difficulty_display }}</span>
               <span class="badge bg-light text-muted small ms-1">{{ item.eq.question.get_question_type_display }}</span>
             </div>
+            <button type="button" class="btn btn-sm btn-outline-warning flag-btn flex-shrink-0" data-qnum="{{ forloop.counter }}" title="Đánh dấu câu phân vân">
+              <i class="bi bi-flag"></i>
+            </button>
           </div>
 
           {% if item.eq.question.question_type == 'essay' %}
@@ -136,9 +146,13 @@
                 onclick="scrollToQuestion({{ forloop.counter }})">{{ forloop.counter }}</button>
               {% endfor %}
             </div>
-            <div class="d-flex gap-2 mt-3 small">
+            <div class="d-flex flex-wrap gap-2 mt-3 small">
               <span class="d-flex align-items-center gap-1"><span style="width:16px;height:16px;background:#2563eb;border-radius:4px;display:inline-block"></span> Đã trả lời</span>
               <span class="d-flex align-items-center gap-1"><span style="width:16px;height:16px;border:2px solid #e2e8f0;border-radius:4px;display:inline-block"></span> Chưa trả lời</span>
+              <span class="d-flex align-items-center gap-1"><i class="bi bi-flag-fill text-warning"></i> Đánh dấu</span>
+            </div>
+            <div class="mt-2 small text-warning-emphasis" id="flagSummary" style="display:none">
+              <i class="bi bi-flag-fill me-1"></i>Đang đánh dấu <strong id="flagCount">0</strong> câu phân vân.
             </div>
           </div>
         </div>
@@ -183,6 +197,31 @@ const PREVENT_CHEATING = {{ exam.prevent_cheating|yesno:"true,false" }};
 const CSRF_TOKEN = '{{ csrf_token }}';
 const LOG_URL = "{% url 'log_proctoring' session.pk %}";
 const SAVE_URL = "{% url 'save_answer' session.pk %}";
+const HEARTBEAT_URL = "{% url 'session_heartbeat' session.pk %}";
+const AVAILABLE_URL = "{% url 'available_exams' %}";
+
+// ── Phát hiện đề bị tạm dừng/kết thúc bởi quản trị -> đưa thí sinh ra ngoài ──
+let kicked = false;
+function kickOut(msg) {
+  if (kicked) return;
+  kicked = true;
+  clearInterval(timerInterval);
+  alert(msg);
+  window.location.href = AVAILABLE_URL;
+}
+function checkExamStatus() {
+  fetch(HEARTBEAT_URL)
+    .then(r => r.json())
+    .then(d => {
+      if (d.exam_status === 'paused') {
+        kickOut('Bài kiểm tra đã được TẠM DỪNG để chỉnh sửa. Bài làm của bạn đã được lưu, vui lòng vào lại sau.');
+      } else if (d.exam_status === 'ended') {
+        kickOut('Bài kiểm tra đã kết thúc.');
+      }
+    })
+    .catch(() => {});
+}
+setInterval(checkExamStatus, 8000);
 
 // ── Countdown timer ──
 let timeLeft = REMAINING_SECONDS;
@@ -217,7 +256,9 @@ function saveAnswer(eqId, type) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
     body: JSON.stringify({ exam_question_id: eqId, choice_ids: selectedIds })
-  });
+  }).then(r => r.json()).then(d => {
+    if (d.status === 'paused') kickOut('Bài kiểm tra đã được TẠM DỪNG. Bài làm của bạn đã được lưu.');
+  }).catch(() => {});
 
   // Update nav button
   const navBtns = document.querySelectorAll('.question-nav-btn');
@@ -268,6 +309,49 @@ function confirmSubmit() {
   }
   new bootstrap.Modal(document.getElementById('submitModal')).show();
 }
+
+// ── Đánh dấu câu hỏi phân vân (lưu theo phiên thi) ──
+const FLAG_KEY = 'ssp-flags-' + SESSION_PK;
+let flagged = new Set(JSON.parse(localStorage.getItem(FLAG_KEY) || '[]'));
+
+function saveFlags() { localStorage.setItem(FLAG_KEY, JSON.stringify(Array.from(flagged))); }
+
+function updateFlagCount() {
+  const summary = document.getElementById('flagSummary');
+  document.getElementById('flagCount').textContent = flagged.size;
+  summary.style.display = flagged.size ? '' : 'none';
+}
+
+function applyFlagUI(num) {
+  const on = flagged.has(num);
+  const card = document.getElementById('question-' + num);
+  if (card) {
+    const btn = card.querySelector('.flag-btn');
+    if (btn) {
+      btn.classList.toggle('btn-warning', on);
+      btn.classList.toggle('btn-outline-warning', !on);
+      btn.querySelector('i').className = on ? 'bi bi-flag-fill' : 'bi bi-flag';
+    }
+  }
+  const nav = document.getElementById('nav-' + num);
+  if (nav) nav.classList.toggle('flagged', on);
+}
+
+document.querySelectorAll('.flag-btn').forEach(function (b) {
+  b.addEventListener('click', function () {
+    const num = parseInt(b.dataset.qnum);
+    if (flagged.has(num)) flagged.delete(num); else flagged.add(num);
+    saveFlags();
+    applyFlagUI(num);
+    updateFlagCount();
+  });
+});
+flagged.forEach(applyFlagUI);
+updateFlagCount();
+
+// Xóa đánh dấu khi nộp bài
+var _submitForm = document.getElementById('submitForm');
+if (_submitForm) _submitForm.addEventListener('submit', function () { localStorage.removeItem(FLAG_KEY); });
 
 // ── Anti-cheat proctoring ──
 function logEvent(eventType, description = '') {

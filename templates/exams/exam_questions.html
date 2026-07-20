@@ -33,6 +33,18 @@
         <div class="form-text mt-1">
           <i class="bi bi-info-circle me-1"></i>Điểm mỗi câu tự động chia theo độ khó (Dễ &lt; TB &lt; Khó), tổng = {{ exam.total_points }} điểm.
         </div>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <div class="form-check mb-0">
+            <input type="checkbox" class="form-check-input" id="selCheckAll">
+            <label class="form-check-label small" for="selCheckAll">Chọn tất cả</label>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger ms-auto" id="btnRemoveSelected" disabled>
+            <i class="bi bi-trash me-1"></i>Xóa đã chọn (<span id="rmCount">0</span>)
+          </button>
+          <button type="button" class="btn btn-sm btn-danger" id="btnRemoveAll" disabled>
+            <i class="bi bi-trash3 me-1"></i>Xóa tất cả
+          </button>
+        </div>
       </div>
       <div class="card-body p-0" style="max-height:58vh;overflow-y:auto">
         <ul class="list-group list-group-flush" id="selectedList"></ul>
@@ -70,7 +82,12 @@
               {{ auto_form.question_type }}
               {% endif %}
             </div>
-            <div class="col-md-4"></div>
+            <div class="col-md-4">
+              <label class="form-label small fw-medium">Chủ đề</label>
+              <select name="auto_topic" id="autoTopic" class="form-select form-select-sm" disabled title="Chọn Môn học trước">
+                <option value="">Tất cả chủ đề</option>
+              </select>
+            </div>
             <div class="col-md-3">
               <label class="form-label small fw-medium">Dễ</label>
               {{ auto_form.easy_count }}
@@ -107,12 +124,22 @@
       <!-- Bộ lọc -->
       <div class="card-body border-bottom py-2">
         <form method="get" class="row g-2 align-items-end">
-          <div class="col-md-4">
+          <div class="col-md-3">
             <label class="form-label small fw-medium mb-1">Môn học</label>
-            <select name="subject" class="form-select form-select-sm" onchange="this.form.submit()">
+            <select name="subject" id="bankSubject" class="form-select form-select-sm">
               <option value="">Tất cả môn</option>
               {% for s in subjects %}
               <option value="{{ s.id }}" {% if filter_subject == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small fw-medium mb-1">Chủ đề</label>
+            <select name="topic" id="bankTopic" class="form-select form-select-sm" onchange="this.form.submit()"
+                    {% if not filter_subject %}disabled title="Chọn Môn học trước"{% endif %}>
+              <option value="">Tất cả chủ đề</option>
+              {% for t in bank_topics %}
+              <option value="{{ t.id }}" {% if filter_topic == t.id|stringformat:'s' %}selected{% endif %}>{{ t.name }}</option>
               {% endfor %}
             </select>
           </div>
@@ -134,7 +161,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <label class="form-label small fw-medium mb-1">Tìm kiếm</label>
             <div class="input-group input-group-sm">
               <input type="text" name="q" class="form-control" value="{{ filter_search }}" placeholder="Nội dung...">
@@ -175,9 +202,9 @@
       {% if page_obj.has_other_pages %}
       <div class="card-footer bg-white">
         <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
-          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
-          {% for num in page_obj.paginator.page_range %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ num }}">{{ num }}</a></li>{% endfor %}
-          {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+          {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_topic %}topic={{ filter_topic }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+          {% for num in page_obj.paginator.page_range %}<li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_topic %}topic={{ filter_topic }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ num }}">{{ num }}</a></li>{% endfor %}
+          {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{% if filter_subject %}subject={{ filter_subject }}&{% endif %}{% if filter_topic %}topic={{ filter_topic }}&{% endif %}{% if filter_qtype %}qtype={{ filter_qtype }}&{% endif %}{% if filter_diff %}difficulty={{ filter_diff }}&{% endif %}{% if filter_search %}q={{ filter_search }}&{% endif %}page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
         </ul></nav>
       </div>
       {% endif %}
@@ -241,10 +268,12 @@
     if (!data.selected.length) {
       selectedList.innerHTML = '<li class="list-group-item text-center text-muted py-4">' +
         '<i class="bi bi-inbox d-block mb-1" style="font-size:1.5rem"></i>Chưa có câu hỏi</li>';
+      updateBulkState();
       return;
     }
     selectedList.innerHTML = data.selected.map(function (it) {
-      return '<li class="list-group-item d-flex justify-content-between align-items-start py-2">' +
+      return '<li class="list-group-item d-flex align-items-start py-2">' +
+        '<input type="checkbox" class="form-check-input sel-check me-2 mt-1 flex-shrink-0" data-qid="' + it.qid + '">' +
         '<div class="me-2 flex-grow-1">' +
           '<span class="badge bg-light text-muted me-1">' + it.order + '</span>' +
           '<span class="small">' + escapeHtml(it.content) + '</span>' +
@@ -253,9 +282,39 @@
             '<span class="badge bg-info-subtle text-info-emphasis" style="font-size:.7rem"><i class="bi bi-star-fill"></i> ' + it.points + ' đ</span>' +
           '</div>' +
         '</div>' +
-        '<button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remove" data-qid="' + it.qid + '" title="Xóa khỏi bài thi"><i class="bi bi-x-lg"></i></button>' +
+        '<button type="button" class="btn btn-sm btn-outline-danger border-0 btn-remove flex-shrink-0" data-qid="' + it.qid + '" title="Xóa khỏi bài thi"><i class="bi bi-x-lg"></i></button>' +
       '</li>';
     }).join('');
+    updateBulkState();
+  }
+
+  function selChecks() {
+    return Array.prototype.slice.call(selectedList.querySelectorAll('.sel-check'));
+  }
+
+  function updateBulkState() {
+    var checks = selChecks();
+    var checked = checks.filter(function (c) { return c.checked; });
+    document.getElementById('rmCount').textContent = checked.length;
+    document.getElementById('btnRemoveSelected').disabled = checked.length === 0;
+    document.getElementById('btnRemoveAll').disabled = checks.length === 0;
+    var all = document.getElementById('selCheckAll');
+    all.checked = checks.length > 0 && checked.length === checks.length;
+    all.indeterminate = checked.length > 0 && checked.length < checks.length;
+  }
+
+  function postBulk(action, qids) {
+    var body = new URLSearchParams();
+    body.append('action', action);
+    qids.forEach(function (id) { body.append('question_ids', id); });
+    body.append('csrfmiddlewaretoken', csrftoken);
+    return fetch(endpoint, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' }, body: body })
+      .then(function (r) { return r.json(); });
+  }
+
+  function handleRemoved(res) {
+    (res.removed_ids || []).forEach(function (id) { setRowAdded(id, false); });
+    renderSelected(res);
   }
 
   function setRowAdded(qid, added) {
@@ -354,6 +413,62 @@
       document.getElementById('detailLoading').classList.add('d-none');
       document.getElementById('detailContent').classList.remove('d-none');
     });
+  }
+
+  // Toolbar xóa hàng loạt
+  document.getElementById('selCheckAll').addEventListener('change', function () {
+    var on = this.checked;
+    selChecks().forEach(function (c) { c.checked = on; });
+    updateBulkState();
+  });
+  selectedList.addEventListener('change', function (e) {
+    if (e.target.classList.contains('sel-check')) updateBulkState();
+  });
+  document.getElementById('btnRemoveSelected').addEventListener('click', function () {
+    var ids = selChecks().filter(function (c) { return c.checked; }).map(function (c) { return c.dataset.qid; });
+    if (!ids.length) return;
+    if (!confirm('Xóa ' + ids.length + ' câu hỏi đã chọn khỏi bài thi?')) return;
+    postBulk('remove_bulk', ids).then(handleRemoved);
+  });
+  document.getElementById('btnRemoveAll').addEventListener('click', function () {
+    if (!selChecks().length) return;
+    if (!confirm('Xóa TẤT CẢ câu hỏi khỏi bài thi? Điểm sẽ được tính lại.')) return;
+    postBulk('remove_all', []).then(handleRemoved);
+  });
+
+  // ── Bộ lọc Chủ đề (phụ thuộc Môn học) ──
+  // Ngân hàng: đổi Môn học -> reset Chủ đề rồi submit để nạp lại danh sách
+  const bankSubject = document.getElementById('bankSubject');
+  const bankTopic = document.getElementById('bankTopic');
+  if (bankSubject) {
+    bankSubject.addEventListener('change', function () {
+      if (bankTopic) bankTopic.value = '';
+      bankSubject.form.submit();
+    });
+  }
+
+  // Tự động thêm: nạp chủ đề theo môn học qua AJAX
+  const autoSubject = document.getElementById('id_subject');
+  const autoTopic = document.getElementById('autoTopic');
+  const TOPICS_URL = "{% url 'get_topics_ajax' %}";
+  function loadAutoTopics() {
+    if (!autoSubject || !autoTopic) return;
+    autoTopic.innerHTML = '<option value="">Tất cả chủ đề</option>';
+    if (!autoSubject.value) { autoTopic.disabled = true; return; }
+    fetch(TOPICS_URL + '?subject_id=' + autoSubject.value)
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        d.topics.forEach(function (t) {
+          const o = document.createElement('option');
+          o.value = t.id; o.textContent = t.name;
+          autoTopic.appendChild(o);
+        });
+        autoTopic.disabled = false;
+      });
+  }
+  if (autoSubject) {
+    autoSubject.addEventListener('change', loadAutoTopics);
+    loadAutoTopics();
   }
 
   // Khởi tạo danh sách đã chọn từ dữ liệu server

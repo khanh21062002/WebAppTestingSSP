@@ -11,7 +11,15 @@
       <div class="card-body">
         <div class="d-flex justify-content-between align-items-start mb-2">
           <h6 class="fw-bold mb-0">{{ exam.title }}</h6>
-          <span class="badge bg-success ms-2">Đang mở</span>
+          {% if exam.student_state == 'paused' %}
+          <span class="badge bg-warning text-dark ms-2"><i class="bi bi-pause-circle me-1"></i>Tạm dừng</span>
+          {% elif exam.student_state == 'upcoming' %}
+          <span class="badge bg-primary ms-2"><i class="bi bi-calendar-event me-1"></i>Sẽ diễn ra</span>
+          {% elif exam.student_state == 'expired' %}
+          <span class="badge bg-danger ms-2"><i class="bi bi-clock-history me-1"></i>Hết hạn</span>
+          {% else %}
+          <span class="badge bg-success ms-2"><i class="bi bi-unlock me-1"></i>Đang mở</span>
+          {% endif %}
         </div>
         {% if exam.subject %}
         <div class="text-muted small mb-2"><i class="bi bi-book me-1"></i>{{ exam.subject.name }}</div>
@@ -39,6 +47,11 @@
             </div>
           </div>
         </div>
+        {% if exam.start_time %}
+        <div class="text-muted small mb-1">
+          <i class="bi bi-calendar-event me-1"></i>Mở lúc: {{ exam.start_time|date:"d/m/Y H:i" }}
+        </div>
+        {% endif %}
         {% if exam.end_time %}
         <div class="text-muted small mb-3">
           <i class="bi bi-clock me-1"></i>Hết hạn: {{ exam.end_time|date:"d/m/Y H:i" }}
@@ -46,9 +59,25 @@
         {% endif %}
       </div>
       <div class="card-footer bg-white border-top-0">
+        {% if exam.student_state == 'paused' %}
+        <button class="btn btn-warning w-100" disabled>
+          <i class="bi bi-pause-circle me-1"></i>Đang tạm dừng
+        </button>
+        <div class="text-center text-muted small mt-1">Quản trị đang chỉnh sửa, vui lòng chờ.</div>
+        {% elif exam.student_state == 'upcoming' %}
+        <button class="btn btn-primary w-100" disabled>
+          <i class="bi bi-calendar-event me-1"></i>Chưa tới giờ mở
+        </button>
+        <div class="text-center text-muted small mt-1">Bài thi sẽ mở lúc {{ exam.start_time|date:"d/m/Y H:i" }}.</div>
+        {% elif exam.student_state == 'expired' %}
+        <button class="btn btn-danger w-100" disabled>
+          <i class="bi bi-clock-history me-1"></i>Đã hết hạn
+        </button>
+        {% else %}
         <a href="{% url 'start_exam' exam.pk %}" class="btn btn-success w-100">
           <i class="bi bi-play-fill me-1"></i>Vào thi ngay
         </a>
+        {% endif %}
       </div>
     </div>
   </div>

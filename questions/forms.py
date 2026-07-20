@@ -43,11 +43,13 @@ class QuestionForm(forms.ModelForm):
 class ChoiceForm(forms.ModelForm):
     class Meta:
         model = Choice
-        fields = ['label', 'content', 'is_correct', 'order']
+        # KHÔNG đưa 'order' vào form (view tự đánh số) — field ẩn bắt buộc
+        # không được render sẽ khiến mọi hàng đáp án invalid ngầm.
+        fields = ['label', 'content', 'is_correct']
         widgets = {
             'label': forms.TextInput(attrs={'class': 'form-control', 'maxlength': 5}),
             'content': forms.TextInput(attrs={'class': 'form-control'}),
-            'order': forms.HiddenInput(),
+            'is_correct': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
 
 

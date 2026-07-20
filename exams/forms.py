@@ -59,13 +59,34 @@ class AutoGenerateForm(forms.Form):
 
 
 class AssignExamForm(forms.Form):
-    class_name = forms.CharField(
-        label='Tên phòng ban/team (để trống nếu giao cho cá nhân)',
+    """Chọn từ dữ liệu tài khoản đã đăng ký thay vì nhập tay."""
+    class_name = forms.ChoiceField(
+        label='Giao theo phòng ban/team',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'VD: Phòng Kinh doanh'})
+        widget=forms.Select(attrs={'class': 'form-select'})
     )
-    user_ids = forms.CharField(
-        label='ID nhân viên (cách nhau bằng dấu phẩy)',
+    users = forms.ModelMultipleChoiceField(
+        queryset=None,
+        label='Giao cho cá nhân',
         required=False,
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'VD: 1,2,3'})
+        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': '10'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        # Danh sách phòng ban/team lấy từ hồ sơ nhân viên đã đăng ký
+        teams = (User.objects.filter(role='student', is_active=True)
+                 .exclude(class_name='')
+                 .values_list('class_name', flat=True).distinct().order_by('class_name'))
+        self.fields['class_name'].choices = [('', '— Chọn phòng ban/team —')] + [(t, t) for t in teams]
+
+        students = User.objects.filter(role='student', is_active=True).order_by('first_name', 'last_name', 'username')
+        self.fields['users'].queryset = students
+        self.fields['users'].label_from_instance = lambda u: '{} — Mã NV: {} — {}'.format(
+            u.get_full_name() or u.username,
+            u.student_id or '?',
+            u.class_name or 'Chưa có phòng ban',
+        )

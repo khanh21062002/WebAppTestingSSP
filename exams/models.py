@@ -27,11 +27,13 @@ class Exam(models.Model):
     STATUS_DRAFT = 'draft'
     STATUS_SCHEDULED = 'scheduled'
     STATUS_ACTIVE = 'active'
+    STATUS_PAUSED = 'paused'
     STATUS_ENDED = 'ended'
     STATUS_CHOICES = [
         (STATUS_DRAFT, 'Nháp'),
         (STATUS_SCHEDULED, 'Đã lên lịch'),
         (STATUS_ACTIVE, 'Đang diễn ra'),
+        (STATUS_PAUSED, 'Tạm dừng'),
         (STATUS_ENDED, 'Đã kết thúc'),
     ]
 
@@ -73,12 +75,61 @@ class Exam(models.Model):
 
     @property
     def is_available(self):
+        if self.status != self.STATUS_ACTIVE:
+            return False
         now = timezone.now()
+        if self.start_time and now < self.start_time:
+            return False
+        if self.end_time and now > self.end_time:
+            return False
+        return True
+
+    @property
+    def is_expired(self):
+        """Đã quá thời hạn kết thúc."""
+        return self.end_time is not None and timezone.now() > self.end_time
+
+    @property
+    def is_upcoming(self):
+        """Được lên lịch mở trong tương lai (chưa tới thời gian bắt đầu)."""
+        return self.start_time is not None and timezone.now() < self.start_time
+
+    @property
+    def student_state(self):
+        """Trạng thái hiển thị cho người thi: paused / upcoming / expired / open."""
+        if self.status == self.STATUS_PAUSED:
+            return 'paused'
+        if self.is_upcoming:
+            return 'upcoming'
+        if self.is_expired:
+            return 'expired'
+        return 'open'
+
+    @property
+    def student_state_display(self):
+        return {
+            'open': 'Đang mở', 'paused': 'Tạm dừng',
+            'expired': 'Đã hết hạn', 'upcoming': 'Sẽ diễn ra',
+        }.get(self.student_state, '')
+
+    @property
+    def effective_status(self):
+        """Trạng thái hiển thị cho admin: active + lịch tương lai -> upcoming; active + quá hạn -> expired."""
         if self.status == self.STATUS_ACTIVE:
-            if self.start_time and self.end_time:
-                return self.start_time <= now <= self.end_time
-            return True
-        return False
+            if self.is_upcoming:
+                return 'upcoming'
+            if self.is_expired:
+                return 'expired'
+        return self.status
+
+    @property
+    def effective_status_display(self):
+        es = self.effective_status
+        if es == 'expired':
+            return 'Đã hết hạn'
+        if es == 'upcoming':
+            return 'Sẽ diễn ra'
+        return self.get_status_display()
 
     @property
     def question_count(self):

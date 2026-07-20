@@ -13,15 +13,22 @@
 <div class="card mb-3">
   <div class="card-body py-3">
     <form class="row g-2 align-items-end" method="get">
-      <div class="col-md-4">
+      <div class="col-md-3">
         <label class="form-label fw-medium small mb-1">Tìm kiếm</label>
         <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm" placeholder="Nội dung câu hỏi...">
       </div>
-      <div class="col-md-3">
+      <div class="col-md-2">
         <label class="form-label fw-medium small mb-1">Môn học</label>
-        <select name="subject" class="form-select form-select-sm">
+        <select name="subject" id="filterSubject" class="form-select form-select-sm">
           <option value="">Tất cả môn</option>
           {% for s in subjects %}<option value="{{ s.pk }}" {% if filters.subject == s.pk|stringformat:"s" %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label fw-medium small mb-1">Chủ đề</label>
+        <select name="topic" id="filterTopic" class="form-select form-select-sm" {% if not filters.subject %}disabled title="Chọn Môn học trước"{% endif %}>
+          <option value="">Tất cả chủ đề</option>
+          {% for t in topics %}<option value="{{ t.pk }}" {% if filters.topic == t.pk|stringformat:"s" %}selected{% endif %}>{{ t.name }}</option>{% endfor %}
         </select>
       </div>
       <div class="col-md-2">
@@ -45,10 +52,21 @@
   </div>
 </div>
 
+<form method="post" action="{% url 'question_bulk_delete' %}" id="bulkDeleteForm">
+{% csrf_token %}
+<input type="hidden" name="return_query" value="q={{ filters.q }}&subject={{ filters.subject }}&topic={{ filters.topic }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">
 <div class="card">
+  <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+    <span class="small text-muted"><span id="qSelCount">0</span> câu hỏi đã chọn</span>
+    <button type="submit" class="btn btn-sm btn-danger" id="btnBulkDelete" disabled
+      onclick="return confirm('Xóa các câu hỏi đã chọn khỏi ngân hàng? Câu hỏi đang nằm trong bài kiểm tra cũng sẽ bị gỡ khỏi bài. Hành động không thể hoàn tác.')">
+      <i class="bi bi-trash me-1"></i>Xóa đã chọn
+    </button>
+  </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0 align-middle">
       <thead><tr>
+        <th style="width:36px"><input type="checkbox" class="form-check-input" id="qCheckAll" title="Chọn tất cả trên trang"></th>
         <th style="width:40px">#</th>
         <th>Nội dung câu hỏi</th>
         <th>Môn học</th>
@@ -60,6 +78,7 @@
       <tbody>
         {% for q in page_obj %}
         <tr>
+          <td><input type="checkbox" class="form-check-input q-row-check" name="question_ids" value="{{ q.pk }}"></td>
           <td class="text-muted small">{{ q.pk }}</td>
           <td>
             <div class="fw-medium" style="max-width:380px">{{ q.content|truncatechars:100 }}</div>
@@ -87,7 +106,7 @@
           </td>
         </tr>
         {% empty %}
-        <tr><td colspan="7" class="text-center text-muted py-5">
+        <tr><td colspan="8" class="text-center text-muted py-5">
           <i class="bi bi-inbox display-6 d-block mb-2"></i>
           Chưa có câu hỏi nào. <a href="{% url 'question_create' %}">Tạo câu hỏi đầu tiên!</a>
         </td></tr>
@@ -99,18 +118,55 @@
   <div class="card-footer bg-white">
     <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
       {% if page_obj.has_previous %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ filters.q }}&subject={{ filters.subject }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">&laquo;</a></li>
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ filters.q }}&subject={{ filters.subject }}&topic={{ filters.topic }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">&laquo;</a></li>
       {% endif %}
       {% for num in page_obj.paginator.page_range %}
       <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-        <a class="page-link" href="?page={{ num }}&q={{ filters.q }}&subject={{ filters.subject }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">{{ num }}</a>
+        <a class="page-link" href="?page={{ num }}&q={{ filters.q }}&subject={{ filters.subject }}&topic={{ filters.topic }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">{{ num }}</a>
       </li>
       {% endfor %}
       {% if page_obj.has_next %}
-      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ filters.q }}&subject={{ filters.subject }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">&raquo;</a></li>
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ filters.q }}&subject={{ filters.subject }}&topic={{ filters.topic }}&type={{ filters.type }}&difficulty={{ filters.difficulty }}">&raquo;</a></li>
       {% endif %}
     </ul></nav>
   </div>
   {% endif %}
 </div>
+</form>
+
+<script>
+// Đổi Môn học -> reset Chủ đề rồi submit để nạp danh sách chủ đề của môn đó
+(function () {
+  var subjectSel = document.getElementById('filterSubject');
+  var topicSel = document.getElementById('filterTopic');
+  if (!subjectSel || !topicSel) return;
+  subjectSel.addEventListener('change', function () {
+    topicSel.value = '';
+    subjectSel.form.submit();
+  });
+})();
+
+// Chọn nhiều câu hỏi để xóa hàng loạt
+(function () {
+  var checkAll = document.getElementById('qCheckAll');
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.q-row-check'));
+  var selCount = document.getElementById('qSelCount');
+  var btnDel = document.getElementById('btnBulkDelete');
+  if (!checkAll || !btnDel) return;
+
+  function refresh() {
+    var n = rows.filter(function (c) { return c.checked; }).length;
+    selCount.textContent = n;
+    btnDel.disabled = n === 0;
+    checkAll.checked = rows.length > 0 && n === rows.length;
+    checkAll.indeterminate = n > 0 && n < rows.length;
+  }
+  checkAll.addEventListener('change', function () {
+    rows.forEach(function (c) { c.checked = checkAll.checked; });
+    refresh();
+  });
+  rows.forEach(function (c) { c.addEventListener('change', refresh); });
+  refresh();
+})();
+</script>
 {% endblock %}

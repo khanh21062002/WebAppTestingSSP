@@ -5,58 +5,169 @@
   <h1><i class="bi bi-file-earmark-text me-2 text-primary"></i>Bài kiểm tra của tôi</h1>
   <a href="{% url 'exam_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>Tạo bài mới</a>
 </div>
-<div class="card">
-  <div class="table-responsive">
-    <table class="table table-hover mb-0 align-middle">
-      <thead><tr>
-        <th>Tiêu đề</th><th>Môn học</th><th>Loại</th>
-        <th>Câu hỏi</th><th>Thời gian</th><th>Trạng thái</th>
-        <th>Lượt thi</th><th>Thao tác</th>
-      </tr></thead>
-      <tbody>
-        {% for exam in page_obj %}
-        <tr>
-          <td>
-            <a href="{% url 'exam_detail' exam.pk %}" class="fw-semibold text-decoration-none">{{ exam.title }}</a>
-            {% if exam.is_public %}<span class="badge bg-info ms-1 small">Công khai</span>{% endif %}
-          </td>
-          <td class="text-muted small">{{ exam.subject.name|default:"—" }}</td>
-          <td><span class="badge bg-light text-dark small">{{ exam.get_exam_type_display }}</span></td>
-          <td class="text-center">{{ exam.q_count }}</td>
-          <td class="small">{{ exam.duration_minutes }} phút</td>
-          <td><span class="badge status-{{ exam.status }}">{{ exam.get_status_display }}</span></td>
-          <td class="text-center">{{ exam.session_count }}</td>
-          <td>
-            <div class="d-flex gap-1">
-              <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary" title="Chi tiết"><i class="bi bi-eye"></i></a>
-              <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
-              {% if exam.status == 'draft' %}
-              <a href="{% url 'exam_publish' exam.pk %}" class="btn btn-sm btn-outline-success" title="Kích hoạt"><i class="bi bi-play-fill"></i></a>
-              {% elif exam.status == 'active' %}
-              <a href="{% url 'exam_end' exam.pk %}" class="btn btn-sm btn-outline-warning" title="Kết thúc"><i class="bi bi-stop-fill"></i></a>
-              {% endif %}
-            </div>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8" class="text-center text-muted py-5">
-          <i class="bi bi-file-earmark-text display-5 d-block mb-2"></i>
-          Chưa có bài kiểm tra nào. <a href="{% url 'exam_create' %}">Tạo ngay!</a>
-        </td></tr>
+
+{% with qbase="status="|add:f_status|add:"&subject="|add:f_subject|add:"&type="|add:f_type %}
+
+<!-- Bộ lọc -->
+<form method="get" class="card p-3 mb-3">
+  <div class="row g-2 align-items-end">
+    <div class="col-md-3">
+      <label class="form-label small fw-medium mb-1">Tìm theo tiêu đề</label>
+      <input type="text" name="q" value="{{ f_search }}" class="form-control form-control-sm" placeholder="Nhập tiêu đề...">
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-medium mb-1">Môn học</label>
+      <select name="subject" class="form-select form-select-sm">
+        <option value="">Tất cả</option>
+        {% for s in subjects %}
+        <option value="{{ s.id }}" {% if f_subject == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
         {% endfor %}
-      </tbody>
-    </table>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-medium mb-1">Loại</label>
+      <select name="type" class="form-select form-select-sm">
+        <option value="">Tất cả</option>
+        {% for val, label in type_choices %}
+        <option value="{{ val }}" {% if f_type == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-2">
+      <label class="form-label small fw-medium mb-1">Trạng thái</label>
+      <select name="status" class="form-select form-select-sm">
+        <option value="">Tất cả</option>
+        <option value="active"  {% if f_status == 'active' %}selected{% endif %}>Đang diễn ra</option>
+        <option value="upcoming" {% if f_status == 'upcoming' %}selected{% endif %}>Sẽ diễn ra</option>
+        <option value="expired" {% if f_status == 'expired' %}selected{% endif %}>Đã hết hạn</option>
+        <option value="ended"   {% if f_status == 'ended' %}selected{% endif %}>Đã kết thúc</option>
+        <option value="paused"  {% if f_status == 'paused' %}selected{% endif %}>Tạm dừng</option>
+        <option value="draft"   {% if f_status == 'draft' %}selected{% endif %}>Nháp</option>
+      </select>
+    </div>
+    <input type="hidden" name="sort" value="{{ sort }}">
+    <input type="hidden" name="dir" value="{{ dir }}">
+    <div class="col-md-3 d-flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary flex-grow-1"><i class="bi bi-funnel me-1"></i>Lọc</button>
+      <a href="{% url 'exam_list' %}" class="btn btn-sm btn-outline-secondary">Xóa lọc</a>
+    </div>
   </div>
-  {% if page_obj.has_other_pages %}
-  <div class="card-footer bg-white">
-    <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
-      {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
-      {% for num in page_obj.paginator.page_range %}
-      <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?page={{ num }}">{{ num }}</a></li>
-      {% endfor %}
-      {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
-    </ul></nav>
+</form>
+
+<!-- Bảng + xóa hàng loạt -->
+<form method="post" action="{% url 'exam_bulk_delete' %}" id="bulkForm">
+  {% csrf_token %}
+  <input type="hidden" name="delete_all" id="deleteAllFlag" value="">
+  <div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+      <span class="small text-muted"><span id="selCount">0</span> đã chọn</span>
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-danger" id="btnDeleteSelected" disabled
+          onclick="return confirm('Xóa các bài kiểm tra đã chọn? Toàn bộ câu hỏi gán, lượt thi và kết quả liên quan sẽ bị xóa vĩnh viễn.')">
+          <i class="bi bi-trash me-1"></i>Xóa đã chọn
+        </button>
+        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAll()">
+          <i class="bi bi-trash3 me-1"></i>Xóa tất cả
+        </button>
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover mb-0 align-middle">
+        <thead><tr>
+          <th style="width:38px"><input type="checkbox" class="form-check-input" id="checkAll"></th>
+          <th><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=title&dir={% if sort == 'title' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Tiêu đề {% if sort == 'title' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=subject&dir={% if sort == 'subject' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Môn học {% if sort == 'subject' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=type&dir={% if sort == 'type' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Loại {% if sort == 'type' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th class="text-center"><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=questions&dir={% if sort == 'questions' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Câu hỏi {% if sort == 'questions' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=duration&dir={% if sort == 'duration' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Thời gian {% if sort == 'duration' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=status&dir={% if sort == 'status' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Trạng thái {% if sort == 'status' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th class="text-center"><a href="?{{ qbase }}&q={{ f_search|urlencode }}&sort=attempts&dir={% if sort == 'attempts' and dir == 'asc' %}desc{% else %}asc{% endif %}" class="text-decoration-none text-reset">Lượt thi {% if sort == 'attempts' %}<i class="bi bi-caret-{% if dir == 'asc' %}up{% else %}down{% endif %}-fill"></i>{% else %}<i class="bi bi-arrow-down-up text-muted small"></i>{% endif %}</a></th>
+          <th>Thao tác</th>
+        </tr></thead>
+        <tbody>
+          {% for exam in page_obj %}
+          <tr>
+            <td><input type="checkbox" class="form-check-input row-check" name="exam_ids" value="{{ exam.pk }}"></td>
+            <td>
+              <a href="{% url 'exam_detail' exam.pk %}" class="fw-semibold text-decoration-none">{{ exam.title }}</a>
+              {% if exam.is_public %}<span class="badge bg-info ms-1 small">Công khai</span>{% endif %}
+            </td>
+            <td class="text-muted small">{{ exam.subject.name|default:"—" }}</td>
+            <td><span class="badge bg-light text-dark small">{{ exam.get_exam_type_display }}</span></td>
+            <td class="text-center">{{ exam.q_count }}</td>
+            <td class="small">{{ exam.duration_minutes }} phút</td>
+            <td><span class="badge status-{{ exam.effective_status }}">{{ exam.effective_status_display }}</span></td>
+            <td class="text-center">{{ exam.session_count }}</td>
+            <td>
+              <div class="d-flex gap-1">
+                <a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-primary" title="Chi tiết"><i class="bi bi-eye"></i></a>
+                <a href="{% url 'exam_edit' exam.pk %}" class="btn btn-sm btn-outline-secondary" title="Sửa"><i class="bi bi-pencil"></i></a>
+                {% if exam.status == 'draft' %}
+                <a href="{% url 'exam_publish' exam.pk %}" class="btn btn-sm btn-outline-success" title="Kích hoạt"><i class="bi bi-play-fill"></i></a>
+                {% elif exam.status == 'active' %}
+                <a href="{% url 'exam_pause' exam.pk %}" class="btn btn-sm btn-outline-warning" title="Tạm dừng"
+                   onclick="return confirm('Tạm dừng bài kiểm tra? Thí sinh đang thi sẽ bị đưa ra ngoài.')"><i class="bi bi-pause-fill"></i></a>
+                <a href="{% url 'exam_end' exam.pk %}" class="btn btn-sm btn-outline-danger" title="Kết thúc"
+                   onclick="return confirm('Kết thúc bài kiểm tra? Không thể mở lại.')"><i class="bi bi-stop-fill"></i></a>
+                {% elif exam.status == 'paused' %}
+                <a href="{% url 'exam_resume' exam.pk %}" class="btn btn-sm btn-outline-success" title="Tiếp tục"><i class="bi bi-play-fill"></i></a>
+                <a href="{% url 'exam_end' exam.pk %}" class="btn btn-sm btn-outline-danger" title="Kết thúc"
+                   onclick="return confirm('Kết thúc bài kiểm tra? Không thể mở lại.')"><i class="bi bi-stop-fill"></i></a>
+                {% endif %}
+                <a href="{% url 'exam_delete' exam.pk %}" class="btn btn-sm btn-outline-danger" title="Xóa"><i class="bi bi-trash"></i></a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="9" class="text-center text-muted py-5">
+            <i class="bi bi-file-earmark-text display-5 d-block mb-2"></i>
+            Không có bài kiểm tra nào khớp bộ lọc.
+          </td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if page_obj.has_other_pages %}
+    <div class="card-footer bg-white">
+      <nav><ul class="pagination pagination-sm mb-0 justify-content-center">
+        {% if page_obj.has_previous %}<li class="page-item"><a class="page-link" href="?{{ qbase }}&q={{ f_search|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page_obj.previous_page_number }}">&laquo;</a></li>{% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}"><a class="page-link" href="?{{ qbase }}&q={{ f_search|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ num }}">{{ num }}</a></li>
+        {% endfor %}
+        {% if page_obj.has_next %}<li class="page-item"><a class="page-link" href="?{{ qbase }}&q={{ f_search|urlencode }}&sort={{ sort }}&dir={{ dir }}&page={{ page_obj.next_page_number }}">&raquo;</a></li>{% endif %}
+      </ul></nav>
+    </div>
+    {% endif %}
   </div>
-  {% endif %}
-</div>
+</form>
+{% endwith %}
+
+<script>
+(function () {
+  const checkAll = document.getElementById('checkAll');
+  const rows = document.querySelectorAll('.row-check');
+  const selCount = document.getElementById('selCount');
+  const btnDel = document.getElementById('btnDeleteSelected');
+
+  function refresh() {
+    const n = document.querySelectorAll('.row-check:checked').length;
+    selCount.textContent = n;
+    btnDel.disabled = n === 0;
+    if (checkAll) checkAll.checked = n > 0 && n === rows.length;
+  }
+  if (checkAll) checkAll.addEventListener('change', () => {
+    rows.forEach(c => c.checked = checkAll.checked);
+    refresh();
+  });
+  rows.forEach(c => c.addEventListener('change', refresh));
+  refresh();
+
+  window.deleteAll = function () {
+    if (confirm('XÓA TẤT CẢ bài kiểm tra? Hành động này KHÔNG THỂ hoàn tác và sẽ xóa mọi câu hỏi gán, lượt thi, kết quả liên quan.')) {
+      document.getElementById('deleteAllFlag').value = '1';
+      document.getElementById('bulkForm').submit();
+    }
+  };
+})();
+</script>
 {% endblock %}

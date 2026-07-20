@@ -7,6 +7,19 @@
 </div>
 <form method="post" enctype="multipart/form-data" id="questionForm">
   {% csrf_token %}
+
+  {% if form.errors or formset.non_form_errors %}
+  <div class="alert alert-danger">
+    <strong><i class="bi bi-exclamation-triangle me-1"></i>Không thể lưu câu hỏi:</strong>
+    <ul class="mb-0 mt-1">
+      {% for field, errors in form.errors.items %}
+        {% for e in errors %}<li>{{ field }}: {{ e }}</li>{% endfor %}
+      {% endfor %}
+      {% for e in formset.non_form_errors %}<li>{{ e }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <div class="row g-3">
     <div class="col-lg-8">
       <div class="card mb-3">
@@ -19,7 +32,13 @@
             </div>
             <div class="col-md-4">
               <label class="form-label fw-medium">Chủ đề</label>
-              {{ form.topic }}
+              <div class="input-group">
+                {{ form.topic }}
+                <button type="button" class="btn btn-outline-primary" id="btnNewTopic" title="Tạo chủ đề mới cho môn học đã chọn">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
+              <div class="form-text">Chọn Môn học trước để lọc/tạo chủ đề.</div>
             </div>
             <div class="col-md-4">
               <label class="form-label fw-medium">Loại câu hỏi *</label>
@@ -54,21 +73,33 @@
       <div class="card" id="choicesSection">
         <div class="card-header bg-white py-3">
           <h6 class="mb-0 fw-bold">Đáp án</h6>
-          <small class="text-muted">Đánh dấu ☑ vào đáp án đúng</small>
+          <small class="text-muted">Tick cột <span class="badge bg-success"><i class="bi bi-check-lg"></i> Đúng</span> cho đáp án đúng. Hàng bỏ trống sẽ được bỏ qua.</small>
         </div>
         <div class="card-body">
           {{ formset.management_form }}
+          <!-- Header cột -->
+          <div class="d-flex gap-2 align-items-center mb-2 small text-muted fw-semibold border-bottom pb-1">
+            <div style="width:60px">Nhãn</div>
+            <div class="flex-grow-1">Nội dung đáp án</div>
+            <div style="width:80px" class="text-center text-success"><i class="bi bi-check-circle me-1"></i>Đúng</div>
+            {% if formset.can_delete %}
+            <div style="width:60px" class="text-center text-danger"><i class="bi bi-trash me-1"></i>Xóa</div>
+            {% endif %}
+          </div>
           <div id="choicesList">
             {% for cf in formset %}
             <div class="choice-row d-flex gap-2 align-items-center mb-2">
               {{ cf.id }}
               <div style="width:60px">{{ cf.label }}</div>
-              <div class="flex-grow-1">{{ cf.content }}</div>
-              <div class="form-check form-check-inline" title="Đáp án đúng">
+              <div class="flex-grow-1">
+                {{ cf.content }}
+                {% if cf.content.errors %}<div class="text-danger small">{{ cf.content.errors.0 }}</div>{% endif %}
+              </div>
+              <div style="width:80px" class="text-center" title="Đánh dấu đây là đáp án đúng">
                 {{ cf.is_correct }}
               </div>
               {% if formset.can_delete %}
-              <div class="form-check" title="Xóa">
+              <div style="width:60px" class="text-center" title="Xóa đáp án này khi lưu">
                 {{ cf.DELETE }}
               </div>
               {% endif %}
@@ -78,8 +109,24 @@
         </div>
       </div>
 
-      <div id="trueFalseInfo" class="alert alert-info mt-3" style="display:none">
-        <i class="bi bi-info-circle me-2"></i>Câu hỏi Đúng/Sai sẽ tự động tạo 2 đáp án: <strong>Đúng</strong> và <strong>Sai</strong>.
+      <!-- Chọn đáp án đúng cho câu Đúng/Sai -->
+      <div class="card mt-3" id="trueFalseSection" style="display:none">
+        <div class="card-header bg-white py-3">
+          <h6 class="mb-0 fw-bold">Đáp án đúng của câu Đúng/Sai</h6>
+          <small class="text-muted">Hệ thống tạo 2 đáp án "Đúng" và "Sai" — hãy chọn đáp án đúng.</small>
+        </div>
+        <div class="card-body">
+          <div class="d-flex gap-4">
+            <label class="choice-label flex-grow-1 mb-0" style="cursor:pointer">
+              <input type="radio" name="tf_correct" value="true" {% if tf_correct == 'true' %}checked{% endif %}>
+              <span class="fw-medium text-success"><i class="bi bi-check-circle me-1"></i>Đúng</span>
+            </label>
+            <label class="choice-label flex-grow-1 mb-0" style="cursor:pointer">
+              <input type="radio" name="tf_correct" value="false" {% if tf_correct == 'false' %}checked{% endif %}>
+              <span class="fw-medium text-danger"><i class="bi bi-x-circle me-1"></i>Sai</span>
+            </label>
+          </div>
+        </div>
       </div>
       <div id="essayInfo" class="alert alert-warning mt-3" style="display:none">
         <i class="bi bi-pencil-square me-2"></i>Câu hỏi tự luận sẽ được chấm điểm thủ công.
@@ -106,31 +153,170 @@
     </div>
   </div>
 </form>
+
+<!-- Modal tạo chủ đề mới -->
+<div class="modal fade" id="newTopicModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-folder-plus me-2"></i>Tạo chủ đề mới</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+          <label class="form-label fw-medium">Môn học</label>
+          <input type="text" class="form-control" id="ntSubjectName" disabled>
+        </div>
+        <div class="mb-2">
+          <label class="form-label fw-medium">Tên chủ đề *</label>
+          <input type="text" class="form-control" id="ntName" placeholder="VD: Vòng lặp, Kiểu dữ liệu...">
+        </div>
+        <div>
+          <label class="form-label fw-medium">Mô tả (tùy chọn)</label>
+          <textarea class="form-control" id="ntDesc" rows="2"></textarea>
+        </div>
+        <div class="alert alert-danger small py-2 mt-2 d-none" id="ntError"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+        <button type="button" class="btn btn-primary" id="ntSave"><i class="bi bi-check-lg me-1"></i>Tạo chủ đề</button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
 const qTypeSelect = document.getElementById('id_question_type');
 const choicesSection = document.getElementById('choicesSection');
-const trueFalseInfo = document.getElementById('trueFalseInfo');
+const trueFalseSection = document.getElementById('trueFalseSection');
 const essayInfo = document.getElementById('essayInfo');
 
 function handleTypeChange() {
   const val = qTypeSelect.value;
   choicesSection.style.display = (val === 'true_false' || val === 'essay') ? 'none' : '';
-  trueFalseInfo.style.display = val === 'true_false' ? '' : 'none';
+  trueFalseSection.style.display = val === 'true_false' ? '' : 'none';
   essayInfo.style.display = val === 'essay' ? '' : 'none';
 }
 
 qTypeSelect.addEventListener('change', handleTypeChange);
 handleTypeChange();
 
-// Auto-fill choice labels A,B,C,D
-document.querySelectorAll('.choice-row').forEach((row, i) => {
-  const labelInput = row.querySelector('[name$="-label"]');
-  if (labelInput && !labelInput.value) {
-    labelInput.value = String.fromCharCode(65 + i);
-  }
+// ── Nhãn đáp án A,B,C... chỉ gán cho hàng CÓ nội dung ──
+// (gán nhãn cho hàng trống sẽ khiến Django coi hàng đó "có dữ liệu" -> bắt nhập nội dung -> không lưu được)
+const choiceRows = Array.from(document.querySelectorAll('.choice-row'));
+
+function syncLabels() {
+  choiceRows.forEach((row, i) => {
+    const content = row.querySelector('[name$="-content"]');
+    const label = row.querySelector('[name$="-label"]');
+    if (!content || !label) return;
+    if (content.value.trim()) {
+      if (!label.value.trim()) label.value = String.fromCharCode(65 + i);
+    }
+  });
+}
+choiceRows.forEach(row => {
+  const content = row.querySelector('[name$="-content"]');
+  if (content) content.addEventListener('input', syncLabels);
 });
+syncLabels();
+
+// Trước khi submit: dọn các hàng trống (xóa nhãn/tick) để Django bỏ qua chúng
+document.getElementById('questionForm').addEventListener('submit', function () {
+  const val = qTypeSelect.value;
+  if (val === 'true_false' || val === 'essay') return;
+  syncLabels();
+  choiceRows.forEach(row => {
+    const content = row.querySelector('[name$="-content"]');
+    const label = row.querySelector('[name$="-label"]');
+    const correct = row.querySelector('[name$="-is_correct"]');
+    const idInput = row.querySelector('[name$="-id"]');
+    const isExisting = idInput && idInput.value;  // bản ghi cũ giữ nguyên (xóa bằng cột Xóa)
+    if (content && !content.value.trim() && !isExisting) {
+      if (label) label.value = '';
+      if (correct) correct.checked = false;
+    }
+  });
+});
+
+// ── Chủ đề động theo Môn học + tạo chủ đề mới ──
+(function () {
+  const subjectSelect = document.getElementById('id_subject');
+  const topicSelect = document.getElementById('id_topic');
+  const TOPICS_URL = "{% url 'get_topics_ajax' %}";
+  const TOPIC_CREATE_URL = "{% url 'topic_create_ajax' %}";
+  const CSRF = document.querySelector('input[name="csrfmiddlewaretoken"]').value;
+
+  function loadTopics(subjectId, selectedId) {
+    topicSelect.innerHTML = '<option value="">— Chọn chủ đề —</option>';
+    if (!subjectId) return;
+    fetch(TOPICS_URL + '?subject_id=' + subjectId)
+      .then(r => r.json())
+      .then(d => {
+        d.topics.forEach(t => {
+          const o = document.createElement('option');
+          o.value = t.id; o.textContent = t.name;
+          if (selectedId && String(selectedId) === String(t.id)) o.selected = true;
+          topicSelect.appendChild(o);
+        });
+      });
+  }
+
+  // Khởi tạo: lọc chủ đề theo môn hiện tại (giữ chủ đề đang gán khi edit)
+  const initialTopic = topicSelect.value || '{{ form.instance.topic_id|default:"" }}';
+  if (subjectSelect.value) loadTopics(subjectSelect.value, initialTopic);
+  subjectSelect.addEventListener('change', () => loadTopics(subjectSelect.value, null));
+
+  // Modal tạo chủ đề
+  const modalEl = document.getElementById('newTopicModal');
+  let topicModal;
+  document.getElementById('btnNewTopic').addEventListener('click', () => {
+    const sOpt = subjectSelect.options[subjectSelect.selectedIndex];
+    if (!subjectSelect.value) {
+      alert('Vui lòng chọn Môn học trước khi tạo chủ đề.');
+      subjectSelect.focus();
+      return;
+    }
+    document.getElementById('ntSubjectName').value = sOpt.text;
+    document.getElementById('ntName').value = '';
+    document.getElementById('ntDesc').value = '';
+    document.getElementById('ntError').classList.add('d-none');
+    if (!topicModal) topicModal = new bootstrap.Modal(modalEl);
+    topicModal.show();
+  });
+
+  document.getElementById('ntSave').addEventListener('click', () => {
+    const name = document.getElementById('ntName').value.trim();
+    const errBox = document.getElementById('ntError');
+    if (!name) {
+      errBox.textContent = 'Vui lòng nhập tên chủ đề.';
+      errBox.classList.remove('d-none');
+      return;
+    }
+    const body = new URLSearchParams();
+    body.append('subject_id', subjectSelect.value);
+    body.append('name', name);
+    body.append('description', document.getElementById('ntDesc').value.trim());
+    body.append('csrfmiddlewaretoken', CSRF);
+    fetch(TOPIC_CREATE_URL, { method: 'POST', body: body })
+      .then(r => r.json().then(j => ({ ok: r.ok, data: j })))
+      .then(res => {
+        if (!res.ok) {
+          errBox.textContent = res.data.message || 'Không thể tạo chủ đề.';
+          errBox.classList.remove('d-none');
+          return;
+        }
+        // Thêm/chọn chủ đề vừa tạo vào dropdown
+        loadTopics(subjectSelect.value, res.data.topic.id);
+        topicModal.hide();
+      })
+      .catch(() => {
+        errBox.textContent = 'Lỗi kết nối, vui lòng thử lại.';
+        errBox.classList.remove('d-none');
+      });
+  });
+})();
 </script>
 {% endblock %}

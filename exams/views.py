@@ -1,6 +1,7 @@
 import random
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q, Count
@@ -17,15 +18,63 @@ from .utils import get_exam_for_staff
 @teacher_required
 def exam_list_view(request):
     qs = Exam.objects.annotate(
-        q_count=Count('exam_questions'),
-        session_count=Count('sessions'),
-    ).order_by('-created_at')
+        q_count=Count('exam_questions', distinct=True),
+        session_count=Count('sessions', distinct=True),
+    ).select_related('subject')
     # Giáo viên chỉ thấy đề của mình; admin thấy tất cả
     if not (request.user.is_admin or request.user.is_superuser):
         qs = qs.filter(created_by=request.user)
-    paginator = Paginator(qs, 10)
+
+    # ── Bộ lọc ──
+    f_status = request.GET.get('status') or ''
+    f_subject = request.GET.get('subject') or ''
+    f_type = request.GET.get('type') or ''
+    f_search = (request.GET.get('q') or '').strip()
+
+    now = timezone.now()
+    if f_status == 'active':          # đang diễn ra (đã tới giờ mở & chưa hết hạn)
+        qs = qs.filter(status=Exam.STATUS_ACTIVE) \
+               .filter(Q(start_time__isnull=True) | Q(start_time__lte=now)) \
+               .filter(Q(end_time__isnull=True) | Q(end_time__gte=now))
+    elif f_status == 'upcoming':      # active nhưng lịch mở trong tương lai
+        qs = qs.filter(status=Exam.STATUS_ACTIVE, start_time__gt=now)
+    elif f_status == 'expired':       # active nhưng đã quá hạn
+        qs = qs.filter(status=Exam.STATUS_ACTIVE, end_time__lt=now)
+    elif f_status:                    # draft / paused / ended / scheduled
+        qs = qs.filter(status=f_status)
+    if f_subject:
+        qs = qs.filter(subject_id=f_subject)
+    if f_type:
+        qs = qs.filter(exam_type=f_type)
+    if f_search:
+        qs = qs.filter(title__icontains=f_search)
+
+    # ── Sắp xếp ──
+    sort_map = {
+        'title': 'title', 'subject': 'subject__name', 'type': 'exam_type',
+        'questions': 'q_count', 'duration': 'duration_minutes',
+        'status': 'status', 'attempts': 'session_count',
+    }
+    sort = request.GET.get('sort')
+    direction = request.GET.get('dir', 'asc')
+    if sort in sort_map:
+        order_field = sort_map[sort]
+        if direction == 'desc':
+            order_field = '-' + order_field
+        qs = qs.order_by(order_field, '-created_at')
+    else:
+        qs = qs.order_by('-created_at')
+
+    from questions.models import Subject
+    paginator = Paginator(qs, 15)
     page = paginator.get_page(request.GET.get('page'))
-    return render(request, 'exams/exam_list.html', {'page_obj': page})
+    return render(request, 'exams/exam_list.html', {
+        'page_obj': page,
+        'subjects': Subject.objects.all(),
+        'type_choices': Exam.TYPE_CHOICES,
+        'f_status': f_status, 'f_subject': f_subject, 'f_type': f_type, 'f_search': f_search,
+        'sort': sort or '', 'dir': direction,
+    })
 
 
 @teacher_required
@@ -123,7 +172,20 @@ def exam_questions_view(request, pk):
                 eq.order = i
                 eq.save(update_fields=['order'])
             exam.recalculate_points()
-            return JsonResponse({'status': 'removed', **_selected_payload(exam)})
+            return JsonResponse({'status': 'removed', 'removed_ids': [q_id], **_selected_payload(exam)})
+
+        elif action in ('remove_bulk', 'remove_all'):
+            if action == 'remove_all':
+                removed_ids = list(exam.exam_questions.values_list('question_id', flat=True))
+                exam.exam_questions.all().delete()
+            else:
+                removed_ids = [int(i) for i in request.POST.getlist('question_ids') if i.isdigit()]
+                ExamQuestion.objects.filter(exam=exam, question_id__in=removed_ids).delete()
+            for i, eq in enumerate(exam.exam_questions.order_by('order'), 1):
+                eq.order = i
+                eq.save(update_fields=['order'])
+            exam.recalculate_points()
+            return JsonResponse({'status': 'removed', 'removed_ids': removed_ids, **_selected_payload(exam)})
 
         elif action == 'reorder':
             order_data = request.POST.getlist('order[]')
@@ -140,6 +202,7 @@ def exam_questions_view(request, pk):
                 # Bài thi cố định loại -> ép loại câu hỏi theo đúng loại đề
                 if qtype_locked:
                     qtype = exam.exam_type
+                auto_topic = request.POST.get('auto_topic') or ''
                 easy = auto_form.cleaned_data['easy_count']
                 medium = auto_form.cleaned_data['medium_count']
                 hard = auto_form.cleaned_data['hard_count']
@@ -154,6 +217,8 @@ def exam_questions_view(request, pk):
                     ).exclude(id__in=existing_ids)
                     if qtype:
                         pool_qs = pool_qs.filter(question_type=qtype)
+                    if auto_topic:
+                        pool_qs = pool_qs.filter(topic_id=auto_topic)
                     pool = list(pool_qs.values_list('id', flat=True))
                     random.shuffle(pool)
                     picked = pool[:count]
@@ -184,6 +249,15 @@ def exam_questions_view(request, pk):
     elif exam.subject:
         all_questions = all_questions.filter(subject=exam.subject)
         f_subject = str(exam.subject_id)
+
+    # Lọc theo chủ đề — chỉ có hiệu lực khi đã chọn Môn học
+    from questions.models import Topic
+    f_topic = request.GET.get('topic') or ''
+    if f_subject and f_topic:
+        all_questions = all_questions.filter(topic_id=f_topic)
+    elif not f_subject:
+        f_topic = ''
+    bank_topics = Topic.objects.filter(subject_id=f_subject).order_by('name') if f_subject else []
 
     # Lọc theo loại: nếu đề cố định loại thì khóa cứng, ngược lại theo bộ lọc
     if qtype_locked:
@@ -220,9 +294,11 @@ def exam_questions_view(request, pk):
         'auto_form': auto_form,
         'qtype_locked': qtype_locked,
         'subjects': Subject.objects.all(),
+        'bank_topics': bank_topics,
         'question_types': Question.TYPE_CHOICES,
         'difficulties': Question.DIFFICULTY_CHOICES,
         'filter_subject': f_subject or '',
+        'filter_topic': f_topic,
         'filter_qtype': f_qtype,
         'filter_diff': f_diff,
         'filter_search': f_search,
@@ -273,12 +349,40 @@ def exam_end_view(request, pk):
 
 
 @teacher_required
+def exam_pause_view(request, pk):
+    exam = get_exam_for_staff(request, pk)
+    if exam.status == Exam.STATUS_ACTIVE:
+        exam.status = Exam.STATUS_PAUSED
+        exam.save(update_fields=['status'])
+        messages.warning(
+            request,
+            'Đã TẠM DỪNG bài kiểm tra. Thí sinh đang làm bài sẽ bị đưa ra ngoài. '
+            'Bạn có thể chỉnh sửa, sau đó bấm "Tiếp tục" để mở lại.'
+        )
+    return redirect('exam_detail', pk=pk)
+
+
+@teacher_required
+def exam_resume_view(request, pk):
+    exam = get_exam_for_staff(request, pk)
+    if exam.status == Exam.STATUS_PAUSED:
+        exam.status = Exam.STATUS_ACTIVE
+        exam.save(update_fields=['status'])
+        messages.success(request, 'Đã TIẾP TỤC bài kiểm tra. Thí sinh có thể vào thi trở lại.')
+    return redirect('exam_detail', pk=pk)
+
+
+@teacher_required
 def assign_exam_view(request, pk):
     exam = get_exam_for_staff(request, pk)
-    form = AssignExamForm(request.POST or None)
+    form = AssignExamForm(request.POST if request.method == 'POST' else None)
     if request.method == 'POST' and form.is_valid():
-        class_name = form.cleaned_data.get('class_name', '').strip()
-        user_ids_raw = form.cleaned_data.get('user_ids', '').strip()
+        class_name = (form.cleaned_data.get('class_name') or '').strip()
+        users = form.cleaned_data.get('users')
+
+        if not class_name and not users:
+            messages.warning(request, 'Vui lòng chọn phòng ban/team hoặc ít nhất một nhân viên để giao bài.')
+            return redirect('exam_assign', pk=pk)
 
         if class_name:
             ExamAssignment.objects.get_or_create(
@@ -287,16 +391,13 @@ def assign_exam_view(request, pk):
             )
             messages.success(request, f'Đã giao bài cho phòng ban/team {class_name}!')
 
-        if user_ids_raw:
-            ids = [int(i.strip()) for i in user_ids_raw.split(',') if i.strip().isdigit()]
-            for uid in ids:
-                user = User.objects.filter(pk=uid).first()
-                if user:
-                    ExamAssignment.objects.get_or_create(
-                        exam=exam, user=user,
-                        defaults={'assigned_by': request.user}
-                    )
-            messages.success(request, f'Đã giao bài cho {len(ids)} người dùng!')
+        if users:
+            for user in users:
+                ExamAssignment.objects.get_or_create(
+                    exam=exam, user=user,
+                    defaults={'assigned_by': request.user}
+                )
+            messages.success(request, f'Đã giao bài cho {users.count()} nhân viên!')
 
         return redirect('exam_detail', pk=pk)
 
@@ -314,6 +415,33 @@ def exam_delete_view(request, pk):
     return render(request, 'exams/exam_confirm_delete.html', {'exam': exam})
 
 
+@teacher_required
+@require_POST
+def exam_bulk_delete_view(request):
+    """Xóa nhiều bài kiểm tra cùng lúc (chọn nhiều / chọn tất cả)."""
+    # Giới hạn phạm vi: giáo viên chỉ xóa đề của mình, admin xóa mọi đề
+    qs = Exam.objects.all()
+    if not (request.user.is_admin or request.user.is_superuser):
+        qs = qs.filter(created_by=request.user)
+
+    if request.POST.get('delete_all'):
+        count = qs.count()
+        qs.delete()
+        messages.success(request, f'Đã xóa TẤT CẢ {count} bài kiểm tra.')
+        return redirect('exam_list')
+
+    ids = request.POST.getlist('exam_ids')
+    if not ids:
+        messages.warning(request, 'Bạn chưa chọn bài kiểm tra nào để xóa.')
+        return redirect('exam_list')
+
+    target = qs.filter(id__in=ids)
+    count = target.count()
+    target.delete()
+    messages.success(request, f'Đã xóa {count} bài kiểm tra đã chọn.')
+    return redirect('exam_list')
+
+
 # Student views
 @login_required
 def available_exams_view(request):
@@ -324,6 +452,6 @@ def available_exams_view(request):
     ).values_list('exam_id', flat=True)
     exams = Exam.objects.filter(
         Q(is_public=True) | Q(id__in=assigned_ids),
-        status=Exam.STATUS_ACTIVE
+        status__in=[Exam.STATUS_ACTIVE, Exam.STATUS_PAUSED]
     ).distinct().select_related('subject')
     return render(request, 'exams/available.html', {'exams': exams})

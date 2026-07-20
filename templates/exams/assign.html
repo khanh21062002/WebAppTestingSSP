@@ -16,14 +16,14 @@
         <form method="post">
           {% csrf_token %}
           <div class="mb-3">
-            <label class="form-label fw-medium">Giao theo lớp</label>
+            <label class="form-label fw-medium">Giao theo phòng ban/team</label>
             {{ form.class_name }}
-            <div class="form-text">Tất cả nhân viên có cùng phòng ban/team sẽ được giao bài.</div>
+            <div class="form-text">Danh sách lấy từ hồ sơ nhân viên đã đăng ký. Tất cả nhân viên cùng phòng ban/team sẽ được giao bài.</div>
           </div>
           <div class="mb-4">
-            <label class="form-label fw-medium">Giao cho cá nhân (theo ID)</label>
-            {{ form.user_ids }}
-            <div class="form-text">Nhập ID người dùng, cách nhau bằng dấu phẩy.</div>
+            <label class="form-label fw-medium">Giao cho cá nhân</label>
+            {{ form.users }}
+            <div class="form-text">Giữ <kbd>Ctrl</kbd> (hoặc <kbd>Cmd</kbd>) và bấm chuột để chọn nhiều nhân viên cùng lúc.</div>
           </div>
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-person-check me-2"></i>Giao bài

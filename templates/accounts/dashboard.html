@@ -70,32 +70,83 @@
   </div>
 </div>
 
+<!-- ── Biểu đồ thành tích nhân viên ── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Số lần thi nhiều nhất</h6></div>
+      <div class="card-body"><canvas id="chartAttempts" height="150"></canvas><div class="text-muted small text-center mt-2 d-none" id="emptyAttempts">Chưa có dữ liệu</div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-x-octagon-fill me-2 text-danger"></i>Tạch (không đạt) nhiều nhất</h6></div>
+      <div class="card-body"><canvas id="chartFails" height="150"></canvas><div class="text-muted small text-center mt-2 d-none" id="emptyFails">Chưa có dữ liệu</div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-trophy-fill me-2 text-success"></i>Đạt nhiều nhất</h6></div>
+      <div class="card-body"><canvas id="chartPasses" height="150"></canvas><div class="text-muted small text-center mt-2 d-none" id="emptyPasses">Chưa có dữ liệu</div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3"><h6 class="mb-0 fw-bold"><i class="bi bi-award-fill me-2 text-warning"></i>Điểm cao nhất mỗi bài</h6></div>
+      <div class="card-body"><canvas id="chartTop" height="150"></canvas><div class="text-muted small text-center mt-2 d-none" id="emptyTop">Chưa có dữ liệu</div></div>
+    </div>
+  </div>
+</div>
+
 <div class="row g-3">
   <div class="col-lg-7">
     <div class="card">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-        <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Bài kiểm tra gần đây</h6>
-        <a href="{% url 'exam_list' %}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+      <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-file-earmark-text me-2 text-primary"></i>Bài kiểm tra gần đây</h6>
+          <a href="{% url 'exam_list' %}" class="btn btn-sm btn-outline-primary">Xem tất cả</a>
+        </div>
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label small mb-0">Từ ngày tạo</label>
+            <input type="date" id="reFrom" class="form-control form-control-sm">
+          </div>
+          <div class="col-6">
+            <label class="form-label small mb-0">Trạng thái</label>
+            <select id="reStatus" class="form-select form-select-sm">
+              <option value="">Tất cả</option>
+              <option value="active">Đang diễn ra</option>
+              <option value="upcoming">Sẽ diễn ra</option>
+              <option value="ended">Đã kết thúc</option>
+              <option value="expired">Đã hết hạn</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead><tr><th>Tiêu đề</th><th>Trạng thái</th><th>Câu hỏi</th><th></th></tr></thead>
-            <tbody>
+          <table class="table table-hover mb-0" id="recentExamsTable">
+            <thead><tr>
+              <th class="sortable" data-key="title" style="cursor:pointer">Tiêu đề <i class="bi bi-arrow-down-up text-muted small"></i></th>
+              <th>Trạng thái</th>
+              <th class="sortable text-center" data-key="questions" style="cursor:pointer">Câu hỏi <i class="bi bi-arrow-down-up text-muted small"></i></th>
+              <th></th>
+            </tr></thead>
+            <tbody id="recentExamsBody">
               {% for exam in my_exams %}
-              <tr>
+              <tr data-title="{{ exam.title|lower }}" data-questions="{{ exam.q_count }}"
+                  data-status="{{ exam.effective_status }}" data-created="{{ exam.created_at|date:'Y-m-d' }}">
                 <td><a href="{% url 'exam_detail' exam.pk %}" class="fw-medium text-decoration-none">{{ exam.title }}</a></td>
-                <td>
-                  <span class="badge status-{{ exam.status }}">{{ exam.get_status_display }}</span>
-                </td>
-                <td>{{ exam.exam_questions.count }}</td>
+                <td><span class="badge status-{{ exam.effective_status }}">{{ exam.effective_status_display }}</span></td>
+                <td class="text-center">{{ exam.q_count }}</td>
                 <td><a href="{% url 'exam_detail' exam.pk %}" class="btn btn-sm btn-outline-secondary">Chi tiết</a></td>
               </tr>
               {% empty %}
-              <tr><td colspan="4" class="text-center text-muted py-4">
+              <tr class="no-filter"><td colspan="4" class="text-center text-muted py-4">
                 Chưa có bài kiểm tra nào. <a href="{% url 'exam_create' %}">Tạo ngay!</a>
               </td></tr>
               {% endfor %}
+              <tr id="reNoMatch" class="d-none"><td colspan="4" class="text-center text-muted py-4">Không có bài nào khớp bộ lọc.</td></tr>
             </tbody>
           </table>
         </div>
@@ -105,34 +156,45 @@
   <div class="col-lg-5">
     <div class="card">
       <div class="card-header bg-white py-3">
-        <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Lượt thi gần đây</h6>
+        <div class="d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Lượt thi gần đây</h6>
+          <div class="btn-group btn-group-sm" role="group" id="rsFilter">
+            <button type="button" class="btn btn-outline-secondary active" data-f="">Tất cả</button>
+            <button type="button" class="btn btn-outline-success" data-f="pass">Đạt</button>
+            <button type="button" class="btn btn-outline-danger" data-f="fail">Tạch</button>
+          </div>
+        </div>
       </div>
       <div class="card-body p-0">
-        <ul class="list-group list-group-flush">
+        <ul class="list-group list-group-flush" id="recentSessionsList">
           {% for s in recent_sessions %}
-          <li class="list-group-item">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
+          <li class="list-group-item rs-item" data-pass="{% if s.is_passed %}1{% else %}0{% endif %}">
+            <div class="d-flex justify-content-between align-items-center">
+              <div class="me-2">
                 <div class="fw-medium small">{{ s.user.get_full_name|default:s.user.username }}</div>
-                <div class="text-muted" style="font-size:.78rem">{{ s.exam.title|truncatechars:35 }}</div>
+                <div class="text-muted" style="font-size:.78rem">{{ s.exam.title|truncatechars:30 }} · {{ s.started_at|date:"d/m H:i" }}</div>
               </div>
-              <div class="text-end">
+              <div class="text-end d-flex align-items-center gap-2">
                 {% if s.score is not None %}
                 <span class="badge {% if s.is_passed %}bg-success{% else %}bg-danger{% endif %}">{{ s.score }}</span>
                 {% else %}
                 <span class="badge bg-secondary">Đang thi</span>
                 {% endif %}
+                <a href="{% url 'exam_result' s.pk %}" class="btn btn-sm btn-outline-secondary" title="Chi tiết"><i class="bi bi-eye"></i></a>
               </div>
             </div>
           </li>
           {% empty %}
           <li class="list-group-item text-muted text-center py-3">Chưa có lượt thi nào</li>
           {% endfor %}
+          <li id="rsNoMatch" class="list-group-item text-muted text-center py-3 d-none">Không có lượt thi nào khớp.</li>
         </ul>
       </div>
     </div>
   </div>
 </div>
+
+{{ charts_data|json_script:"chartsData" }}
 
 {% else %}
 <!-- STUDENT DASHBOARD -->
@@ -161,25 +223,58 @@
 <div class="row g-3">
   <div class="col-lg-8">
     <div class="card">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-        <h6 class="mb-0 fw-bold"><i class="bi bi-journal-check me-2 text-success"></i>Bài thi hiện có</h6>
-        <a href="{% url 'available_exams' %}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
+      <div class="card-header bg-white py-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-journal-check me-2 text-success"></i>Bài thi hiện có</h6>
+          <a href="{% url 'available_exams' %}" class="btn btn-sm btn-outline-success">Xem tất cả</a>
+        </div>
+        <div class="row g-2">
+          <div class="col-md-4"><input type="text" id="saSearch" class="form-control form-control-sm" placeholder="Tìm tiêu đề..."></div>
+          <div class="col-md-4"><select id="saSubject" class="form-select form-select-sm"><option value="">Tất cả môn học</option></select></div>
+          <div class="col-md-4">
+            <select id="saStatus" class="form-select form-select-sm">
+              <option value="">Tất cả trạng thái</option>
+              <option value="open">Đang mở</option>
+              <option value="upcoming">Sẽ diễn ra</option>
+              <option value="paused">Tạm dừng</option>
+              <option value="expired">Đã hết hạn</option>
+            </select>
+          </div>
+        </div>
       </div>
       <div class="card-body p-0">
         <div class="table-responsive">
-          <table class="table table-hover mb-0">
-            <thead><tr><th>Tiêu đề</th><th>Môn học</th><th>Thời gian</th><th></th></tr></thead>
-            <tbody>
+          <table class="table table-hover mb-0" id="saTable">
+            <thead><tr>
+              <th>Tiêu đề</th><th>Môn học</th>
+              <th class="sa-sort" data-key="duration" style="cursor:pointer">Thời gian <i class="bi bi-arrow-down-up text-muted small"></i></th>
+              <th>Trạng thái</th><th></th>
+            </tr></thead>
+            <tbody id="saBody">
               {% for exam in available_exams %}
-              <tr>
+              <tr data-title="{{ exam.title|lower }}" data-subject="{{ exam.subject.name|default:'—' }}"
+                  data-duration="{{ exam.duration_minutes }}" data-status="{{ exam.student_state }}">
                 <td><span class="fw-medium">{{ exam.title }}</span></td>
                 <td><span class="text-muted small">{{ exam.subject.name|default:'—' }}</span></td>
                 <td><span class="badge bg-light text-dark">{{ exam.duration_minutes }} phút</span></td>
-                <td><a href="{% url 'start_exam' exam.pk %}" class="btn btn-sm btn-primary">Vào thi</a></td>
+                <td>
+                  {% if exam.student_state == 'open' %}<span class="badge bg-success">Đang mở</span>
+                  {% elif exam.student_state == 'upcoming' %}<span class="badge bg-primary">Sẽ diễn ra</span>
+                  {% elif exam.student_state == 'paused' %}<span class="badge bg-warning text-dark">Tạm dừng</span>
+                  {% else %}<span class="badge bg-danger">Đã hết hạn</span>{% endif %}
+                </td>
+                <td>
+                  {% if exam.student_state == 'open' %}
+                  <a href="{% url 'start_exam' exam.pk %}" class="btn btn-sm btn-primary">Vào thi</a>
+                  {% else %}
+                  <button class="btn btn-sm btn-outline-secondary" disabled>Chưa mở</button>
+                  {% endif %}
+                </td>
               </tr>
               {% empty %}
-              <tr><td colspan="4" class="text-center text-muted py-4">Hiện không có bài thi nào.</td></tr>
+              <tr class="no-filter"><td colspan="5" class="text-center text-muted py-4">Hiện không có bài thi nào.</td></tr>
               {% endfor %}
+              <tr id="saNoMatch" class="d-none"><td colspan="5" class="text-center text-muted py-4">Không có bài thi nào khớp bộ lọc.</td></tr>
             </tbody>
           </table>
         </div>
@@ -216,5 +311,256 @@
     </div>
   </div>
 </div>
+
+<!-- Bảng xếp hạng theo bài kiểm tra -->
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-white py-3">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-trophy-fill me-2 text-warning"></i>Bảng xếp hạng theo bài kiểm tra</h6>
+          <select id="lbExam" class="form-select form-select-sm" style="max-width:340px"></select>
+        </div>
+      </div>
+      <div class="card-body">
+        <div id="lbEmpty" class="text-center text-muted py-4 d-none">Chưa có dữ liệu xếp hạng.</div>
+        <div id="lbContent">
+          <canvas id="lbChart" height="90"></canvas>
+          <div class="table-responsive mt-3">
+            <table class="table table-hover align-middle mb-0">
+              <thead><tr>
+                <th style="width:50px">#</th><th>Nhân viên</th>
+                <th class="text-center">Điểm cao nhất</th>
+                <th class="text-center">Số lần thi</th>
+                <th class="text-center">Số lần tạch</th>
+              </tr></thead>
+              <tbody id="lbBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ leaderboard_data|json_script:"leaderboardData" }}
+{{ lb_exams|json_script:"lbExamsData" }}
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+{% if user.can_create_exam %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  var el = document.getElementById('chartsData');
+  if (!el) return;
+  var data = JSON.parse(el.textContent);
+  var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+  var gridColor = dark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
+  var tickColor = dark ? '#cbd5e1' : '#475569';
+
+  function barChart(canvasId, emptyId, chart, color, extraTooltip) {
+    var cv = document.getElementById(canvasId);
+    if (!cv) return;
+    if (!chart.labels.length) {
+      cv.classList.add('d-none');
+      document.getElementById(emptyId).classList.remove('d-none');
+      return;
+    }
+    new Chart(cv, {
+      type: 'bar',
+      data: { labels: chart.labels, datasets: [{ data: chart.data, backgroundColor: color, borderRadius: 6, maxBarThickness: 42 }] },
+      options: {
+        indexAxis: 'y',
+        plugins: {
+          legend: { display: false },
+          tooltip: extraTooltip ? { callbacks: { afterLabel: function (ctx) { return 'Cao nhất: ' + (chart.users[ctx.dataIndex] || ''); } } } : {}
+        },
+        scales: {
+          x: { beginAtZero: true, ticks: { color: tickColor, precision: 0 }, grid: { color: gridColor } },
+          y: { ticks: { color: tickColor }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  barChart('chartAttempts', 'emptyAttempts', data.attempts, '#2563eb');
+  barChart('chartFails', 'emptyFails', data.fails, '#dc2626');
+  barChart('chartPasses', 'emptyPasses', data.passes, '#16a34a');
+  barChart('chartTop', 'emptyTop', data.topscore, '#d97706', true);
+
+  // ── Bảng "Bài kiểm tra gần đây": lọc + sắp xếp ──
+  var body = document.getElementById('recentExamsBody');
+  if (body) {
+    var allRows = Array.prototype.slice.call(body.querySelectorAll('tr[data-title]'));
+    var noMatch = document.getElementById('reNoMatch');
+    var fromEl = document.getElementById('reFrom');
+    var statusEl = document.getElementById('reStatus');
+    var sortKey = null, sortDir = 1;
+    var statusPriority = { active: 0, upcoming: 1, paused: 2, expired: 3, scheduled: 4, draft: 5, ended: 6 };
+
+    function apply() {
+      var from = fromEl.value;
+      var st = statusEl.value;
+      var visible = allRows.filter(function (r) {
+        if (from && r.dataset.created < from) return false;
+        if (st && r.dataset.status !== st) return false;
+        return true;
+      });
+      visible.sort(function (a, b) {
+        if (sortKey === 'title') return a.dataset.title.localeCompare(b.dataset.title) * sortDir;
+        if (sortKey === 'questions') return (a.dataset.questions - b.dataset.questions) * sortDir;
+        // mặc định: đang diễn ra trước, kết thúc sau
+        return (statusPriority[a.dataset.status] ?? 9) - (statusPriority[b.dataset.status] ?? 9);
+      });
+      allRows.forEach(function (r) { r.classList.add('d-none'); });
+      visible.forEach(function (r) { r.classList.remove('d-none'); body.appendChild(r); });
+      noMatch.classList.toggle('d-none', visible.length > 0);
+      body.appendChild(noMatch);
+    }
+    fromEl.addEventListener('change', apply);
+    statusEl.addEventListener('change', apply);
+    document.querySelectorAll('#recentExamsTable th.sortable').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var k = th.dataset.key;
+        sortDir = (sortKey === k) ? -sortDir : 1;
+        sortKey = k;
+        document.querySelectorAll('#recentExamsTable th.sortable i').forEach(function (i) { i.className = 'bi bi-arrow-down-up text-muted small'; });
+        th.querySelector('i').className = 'bi bi-caret-' + (sortDir === 1 ? 'up' : 'down') + '-fill small';
+        apply();
+      });
+    });
+    apply();
+  }
+
+  // ── Lượt thi gần đây: lọc đạt/tạch ──
+  var rsBtns = document.querySelectorAll('#rsFilter button');
+  var rsItems = document.querySelectorAll('#recentSessionsList .rs-item');
+  var rsNoMatch = document.getElementById('rsNoMatch');
+  rsBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      rsBtns.forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var f = btn.dataset.f;
+      var shown = 0;
+      rsItems.forEach(function (it) {
+        var ok = !f || (f === 'pass' && it.dataset.pass === '1') || (f === 'fail' && it.dataset.pass === '0');
+        it.classList.toggle('d-none', !ok);
+        if (ok) shown++;
+      });
+      if (rsNoMatch) rsNoMatch.classList.toggle('d-none', shown > 0);
+    });
+  });
+})();
+</script>
+{% else %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+// ── Bài thi hiện có (nhân viên): lọc theo cột + sắp xếp thời gian ──
+(function () {
+  var body = document.getElementById('saBody');
+  if (!body) return;
+  var rows = Array.prototype.slice.call(body.querySelectorAll('tr[data-title]'));
+  var noMatch = document.getElementById('saNoMatch');
+  var searchEl = document.getElementById('saSearch');
+  var subjectEl = document.getElementById('saSubject');
+  var statusEl = document.getElementById('saStatus');
+  var durDir = 0;  // 0 = không sắp xếp
+
+  // Xây danh sách môn học duy nhất
+  var subjects = [];
+  rows.forEach(function (r) { if (subjects.indexOf(r.dataset.subject) === -1) subjects.push(r.dataset.subject); });
+  subjects.sort().forEach(function (s) {
+    var o = document.createElement('option'); o.value = s; o.textContent = s; subjectEl.appendChild(o);
+  });
+
+  function apply() {
+    var q = searchEl.value.trim().toLowerCase();
+    var subj = subjectEl.value;
+    var st = statusEl.value;
+    var visible = rows.filter(function (r) {
+      if (q && r.dataset.title.indexOf(q) === -1) return false;
+      if (subj && r.dataset.subject !== subj) return false;
+      if (st && r.dataset.status !== st) return false;
+      return true;
+    });
+    if (durDir !== 0) {
+      visible.sort(function (a, b) { return (a.dataset.duration - b.dataset.duration) * durDir; });
+    }
+    rows.forEach(function (r) { r.classList.add('d-none'); });
+    visible.forEach(function (r) { r.classList.remove('d-none'); body.appendChild(r); });
+    noMatch.classList.toggle('d-none', visible.length > 0);
+    body.appendChild(noMatch);
+  }
+  searchEl.addEventListener('input', apply);
+  subjectEl.addEventListener('change', apply);
+  statusEl.addEventListener('change', apply);
+  var durTh = document.querySelector('#saTable th.sa-sort');
+  if (durTh) durTh.addEventListener('click', function () {
+    durDir = durDir === 1 ? -1 : 1;
+    durTh.querySelector('i').className = 'bi bi-caret-' + (durDir === 1 ? 'up' : 'down') + '-fill small';
+    apply();
+  });
+  apply();
+})();
+
+// ── Bảng xếp hạng theo bài kiểm tra ──
+(function () {
+  var sel = document.getElementById('lbExam');
+  if (!sel) return;
+  var data = JSON.parse(document.getElementById('leaderboardData').textContent);
+  var exams = JSON.parse(document.getElementById('lbExamsData').textContent);
+  var emptyBox = document.getElementById('lbEmpty');
+  var contentBox = document.getElementById('lbContent');
+  var body = document.getElementById('lbBody');
+  var dark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+  var grid = dark ? 'rgba(255,255,255,.1)' : 'rgba(0,0,0,.08)';
+  var tick = dark ? '#cbd5e1' : '#475569';
+  var chart = null;
+
+  if (!exams.length) {
+    emptyBox.classList.remove('d-none');
+    contentBox.classList.add('d-none');
+    return;
+  }
+  exams.forEach(function (e) {
+    var o = document.createElement('option'); o.value = e.id; o.textContent = e.title; sel.appendChild(o);
+  });
+
+  function medal(i) { return i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i + 1); }
+
+  function render(exId) {
+    var d = data[exId];
+    if (!d) return;
+    var labels = d.rows.map(function (r) { return r.name; });
+    var scores = d.rows.map(function (r) { return r.best; });
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('lbChart'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ label: 'Điểm cao nhất', data: scores, backgroundColor: '#d97706', borderRadius: 6, maxBarThickness: 46 }] },
+      options: {
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, suggestedMax: d.total, ticks: { color: tick }, grid: { color: grid } },
+          x: { ticks: { color: tick }, grid: { display: false } }
+        }
+      }
+    });
+    body.innerHTML = d.rows.map(function (r, i) {
+      return '<tr>' +
+        '<td class="fw-bold">' + medal(i) + '</td>' +
+        '<td>' + r.name + '</td>' +
+        '<td class="text-center"><span class="badge bg-success-subtle text-success-emphasis">' + r.best.toFixed(2) + ' / ' + d.total.toFixed(2) + '</span></td>' +
+        '<td class="text-center">' + r.attempts + '</td>' +
+        '<td class="text-center">' + (r.fails > 0 ? '<span class="badge bg-danger-subtle text-danger-emphasis">' + r.fails + '</span>' : '0') + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  sel.addEventListener('change', function () { render(this.value); });
+  render(sel.value);
+})();
+</script>
 {% endif %}
 {% endblock %}

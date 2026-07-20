@@ -9,8 +9,11 @@ urlpatterns = [
     path('<int:pk>/questions/', views.exam_questions_view, name='exam_questions'),
     path('question/<int:pk>/detail/', views.question_detail_api, name='question_detail_api'),
     path('<int:pk>/publish/', views.exam_publish_view, name='exam_publish'),
+    path('<int:pk>/pause/', views.exam_pause_view, name='exam_pause'),
+    path('<int:pk>/resume/', views.exam_resume_view, name='exam_resume'),
     path('<int:pk>/end/', views.exam_end_view, name='exam_end'),
     path('<int:pk>/assign/', views.assign_exam_view, name='exam_assign'),
     path('<int:pk>/delete/', views.exam_delete_view, name='exam_delete'),
+    path('bulk-delete/', views.exam_bulk_delete_view, name='exam_bulk_delete'),
     path('available/', views.available_exams_view, name='available_exams'),
 ]

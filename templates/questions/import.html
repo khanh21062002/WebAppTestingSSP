@@ -37,7 +37,7 @@
         <div class="table-responsive">
           <table class="table table-sm table-bordered small">
             <thead class="table-light">
-              <tr><th>Cột A</th><th>Cột B</th><th>Cột C</th><th>D-H</th><th>Cột I</th><th>Cột J</th></tr>
+              <tr><th>Cột A</th><th>Cột B</th><th>Cột C</th><th>D-H</th><th>Cột I</th><th>Cột J</th><th>Cột K</th><th>Cột L</th><th>Cột M</th></tr>
             </thead>
             <tbody>
               <tr>
@@ -47,13 +47,21 @@
                 <td>Đáp án A, B, C, D, E</td>
                 <td>Đáp án đúng<br><code>A</code> hoặc <code>A,B</code></td>
                 <td>Giải thích</td>
+                <td><strong>Môn học</strong><br><span class="text-muted">bỏ trống = dùng môn đã chọn ở trên; tên mới sẽ tự tạo</span></td>
+                <td><strong>Chủ đề</strong><br><span class="text-muted">tự tạo trong môn nếu chưa có</span></td>
+                <td><strong>Điểm</strong><br><span class="text-muted">mặc định 1</span></td>
               </tr>
             </tbody>
           </table>
         </div>
-        <a href="{% url 'export_questions' %}" class="btn btn-sm btn-outline-success">
-          <i class="bi bi-download me-1"></i>Tải file mẫu Excel
-        </a>
+        <div class="d-flex gap-2">
+          <a href="{% url 'import_template' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-file-earmark-arrow-down me-1"></i>Tải file mẫu Excel (kèm ví dụ)
+          </a>
+          <a href="{% url 'export_questions' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-download me-1"></i>Export ngân hàng hiện tại
+          </a>
+        </div>
       </div>
     </div>
 
@@ -68,8 +76,16 @@ B. Đáp án B
 C. Đáp án C (đáp án đúng — đánh dấu * hoặc ghi dòng Đáp án: C)
 D. Đáp án D
 Đáp án: C
+Môn học: Lập trình Python   (tùy chọn — bỏ trống dùng môn đã chọn ở trên)
+Chủ đề: Kiểu dữ liệu        (tùy chọn — tự tạo trong môn nếu chưa có)
+Điểm: 2                     (tùy chọn — mặc định 1)
+Độ khó: khó                 (tùy chọn — dễ / trung bình / khó)
 
 Câu 2: Câu hỏi tiếp theo...</pre>
+        <div class="alert alert-info small py-2 mb-0">
+          <i class="bi bi-info-circle me-1"></i>Các dòng <strong>Môn học / Chủ đề / Điểm / Độ khó</strong> là tùy chọn,
+          đặt sau danh sách đáp án của từng câu. Nếu có nhiều hơn 1 đáp án đúng, hệ thống tự nhận là câu "nhiều đáp án".
+        </div>
       </div>
     </div>
   </div>

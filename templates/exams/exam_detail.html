@@ -4,7 +4,7 @@
 <div class="page-header">
   <div>
     <h1><i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ exam.title }}</h1>
-    <span class="badge status-{{ exam.status }} me-1">{{ exam.get_status_display }}</span>
+    <span class="badge status-{{ exam.effective_status }} me-1">{{ exam.effective_status_display }}</span>
     <span class="badge bg-light text-dark">{{ exam.get_exam_type_display }}</span>
   </div>
   <div class="d-flex gap-2">
@@ -12,7 +12,20 @@
     {% if exam.status == 'draft' %}
     <a href="{% url 'exam_publish' exam.pk %}" class="btn btn-success"><i class="bi bi-play-fill me-1"></i>Kích hoạt</a>
     {% elif exam.status == 'active' %}
-    <a href="{% url 'exam_end' exam.pk %}" class="btn btn-warning"><i class="bi bi-stop-fill me-1"></i>Kết thúc</a>
+    <a href="{% url 'exam_pause' exam.pk %}" class="btn btn-warning"
+       onclick="return confirm('Tạm dừng bài kiểm tra? Thí sinh đang làm bài sẽ bị đưa ra ngoài để bạn chỉnh sửa.')">
+      <i class="bi bi-pause-fill me-1"></i>Tạm dừng
+    </a>
+    <a href="{% url 'exam_end' exam.pk %}" class="btn btn-outline-danger"
+       onclick="return confirm('Kết thúc bài kiểm tra? Hành động này không thể mở lại.')">
+      <i class="bi bi-stop-fill me-1"></i>Kết thúc
+    </a>
+    {% elif exam.status == 'paused' %}
+    <a href="{% url 'exam_resume' exam.pk %}" class="btn btn-success"><i class="bi bi-play-fill me-1"></i>Tiếp tục</a>
+    <a href="{% url 'exam_end' exam.pk %}" class="btn btn-outline-danger"
+       onclick="return confirm('Kết thúc bài kiểm tra? Hành động này không thể mở lại.')">
+      <i class="bi bi-stop-fill me-1"></i>Kết thúc
+    </a>
     {% endif %}
   </div>
 </div>
